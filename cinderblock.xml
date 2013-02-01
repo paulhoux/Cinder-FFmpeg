@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<cinder>
+<block
+	name="Video"
+	id="nl.cowlumbus.video"
+	author="Paul Houx"
+	license="GPL, Commercial"
+	summary="Digital video decoder for Cinder"
+	url="https://github.com/paulhoux/Cinder-Video"
+	git="git://github.com/paulhoux/Cinder-Video.git"
+	>
+	<supports os="msw" />
+	<includePath>include</includePath>
+	<includePath system="true">src</includePath>
+	<header>include/CinderVideo.h</header>
+	<sourcePattern>include/audiorenderer/*.cpp</sourcePattern>
+	<sourcePattern>include/movierenderer/*.cpp</sourcePattern>
+	<sourcePattern>include/common/*.cpp</sourcePattern>
+	<platform os="msw">
+		<staticLibrary>build/lib/msw/avcodec.lib</staticLibrary>
+		<!--staticLibrary>build/lib/msw/avdevice.lib</staticLibrary-->
+		<!--staticLibrary>build/lib/msw/avfilter.lib</staticLibrary-->
+		<staticLibrary>build/lib/msw/avformat.lib</staticLibrary>
+		<staticLibrary>build/lib/msw/avutil.lib</staticLibrary>
+		<!--staticLibrary>build/lib/msw/postproc.lib</staticLibrary-->
+		<staticLibrary>build/lib/msw/swresample.lib</staticLibrary>
+		<staticLibrary>build/lib/msw/swscale.lib</staticLibrary>
+		
+		<buildCopy>build/bin/msw/avcodec-54.dll</buildCopy>
+		<!--buildCopy>build/bin/msw/avdevice-54.dll</buildCopy-->
+		<!--buildCopy>build/bin/msw/avfilter-3.dll</buildCopy-->
+		<buildCopy>build/bin/msw/avformat-54.dll</buildCopy>
+		<buildCopy>build/bin/msw/avutil-52.dll</buildCopy>
+		<!--buildCopy>build/bin/msw/postproc-52.dll</buildCopy-->
+		<buildCopy>build/bin/msw/swresample-0.dll</buildCopy>
+		<buildCopy>build/bin/msw/swscale-2.dll</buildCopy>
+	</platform>
+</block>
+<template>templates/Basic Video/template.xml</template>
+</cinder>
