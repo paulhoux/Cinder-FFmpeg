@@ -4,6 +4,7 @@
 #include "cinder/gl/Fbo.h"
 #include "cinder/gl/GlslProg.h"
 #include "cinder/gl/Texture.h"
+#include "cinder/Timer.h"
 
 #include "CinderVideo.h"
 
@@ -14,10 +15,16 @@ using namespace std;
 class _TBOX_PREFIX_App : public AppNative {
 public:
 	void setup();
-	void mouseDown( MouseEvent event );	
 	void update();
 	void draw();
+
+	void fileDrop( FileDropEvent event );
+
+	void playVideo( const fs::path &path );
+	void stopVideo();
 private:
+	bool			mIsPlaying;
+
 	MovieDecoder	mMovieDecoder;
 
 	int				mFrameWidth;
@@ -33,54 +40,35 @@ private:
 	gl::Texture		mVPlane;
 
 	gl::GlslProg	mShader;
+
+	Timer			mTimer;
 };
 
 void _TBOX_PREFIX_App::setup()
 {
-	//
-	try {
-	mShader = gl::GlslProg( loadAsset("framerender_vert.glsl"), loadAsset("framerender_frag.glsl") );
-	}
-	catch( const std::exception &e ) {
-		console() << e.what() << std::endl;
-	}
-
-	std::string movieFilename = "V:/Animation/(2012) Kuifje en het Geheim van de Eenhoorn (HD)(NL).m2ts";
-
-	if( mMovieDecoder.initialize( movieFilename ) )
-	{
-		mMovieDecoder.start();
-		console() << "Playing " << movieFilename << std::endl;
-	}
-	else
-	{
-		mMovieDecoder.destroy();
-        console() << "Failed to open " << movieFilename << std::endl;
-	}
-
-	mAudioClockOffset = 0.0;
-	mAudioClock = 0.0;
-	mVideoClock = 0.0;
+	// load and compile YUV-decoding shader
+	try { mShader = gl::GlslProg( loadAsset("framerender_vert.glsl"), loadAsset("framerender_frag.glsl") ); }
+	catch( const std::exception &e ) { console() << e.what() << std::endl; }
 }
 
 void _TBOX_PREFIX_App::update()
 {
-	//while( mAudioRenderer->hasBufferSpace() )
+	// video does not run without decoding the audio, for some reason
 	while(true)
 	{
 		AudioFrame audioFrame;
 		if( mMovieDecoder.decodeAudioFrame(audioFrame) )
 		{
-			//mAudioRenderer->queueFrame(audioFrame);
 		}
 		else
 			break;
 	}
 	
-	mAudioClock = getElapsedSeconds() + mAudioClockOffset;
+	mAudioClock = mTimer.getSeconds() + mAudioClockOffset;
 
 	bool decoded = false;
 	int count = 0;
+
 	VideoFrame videoFrame;
 	while( mVideoClock < mAudioClock && count < 10 )
 	{
@@ -93,8 +81,7 @@ void _TBOX_PREFIX_App::update()
 				mAudioClockOffset = mVideoClock - mAudioClock;
 
 			// resize
-			if( videoFrame.getHeight() != mFrameHeight ||
-				videoFrame.getWidth() != mFrameWidth )
+			if( videoFrame.getHeight() != mFrameHeight || videoFrame.getWidth() != mFrameWidth )
 			{
 				mFrameWidth = videoFrame.getWidth();
 				mFrameHeight = videoFrame.getHeight();
@@ -176,8 +163,47 @@ void _TBOX_PREFIX_App::draw()
 	mShader.unbind();
 }
 
-void _TBOX_PREFIX_App::mouseDown( MouseEvent event )
+void _TBOX_PREFIX_App::fileDrop( FileDropEvent event )
 {
+	stopVideo();
+
+	for( size_t i=0; i<event.getNumFiles() && !mIsPlaying; ++i )
+		playVideo( event.getFile(i) );
+}
+
+void _TBOX_PREFIX_App::playVideo( const fs::path &path )
+{
+	stopVideo();
+
+	if( mMovieDecoder.initialize( path.generic_string() ) )
+	{
+		console() << "Playing " << path.generic_string() << std::endl;
+
+		mMovieDecoder.start();
+		mIsPlaying = true;		
+
+		// initialize time
+		mAudioClockOffset = 0.0;
+		mAudioClock = 0.0;
+		mVideoClock = 0.0;
+
+		mTimer.start();
+	}
+	else
+	{
+        console() << "Failed to open " << path.generic_string() << std::endl;
+
+		stopVideo();
+	}
+}
+
+void _TBOX_PREFIX_App::stopVideo()
+{
+	if( mIsPlaying )
+	{
+		mIsPlaying = false;
+		mMovieDecoder.destroy();
+	}
 }
 
 CINDER_APP_NATIVE( _TBOX_PREFIX_App, RendererGl )

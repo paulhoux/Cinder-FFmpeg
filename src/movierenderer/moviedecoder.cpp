@@ -1,5 +1,5 @@
-#include "moviedecoder.h"
-#include "videoframe.h"
+#include "movierenderer/moviedecoder.h"
+#include "movierenderer/videoframe.h"
 #include "audiorenderer/audioframe.h"
 
 #include <cassert>
@@ -387,7 +387,7 @@ bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
 {
     AVPacket    packet;
     int         bytesRemaining;
-    ::uint8_t*  rawData;
+    //::uint8_t*  rawData;
     int         dataSize = (AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2;
     bool        frameDecoded = false;
 

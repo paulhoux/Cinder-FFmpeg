@@ -11,11 +11,9 @@
 	>
 	<supports os="msw" />
 	<includePath>include</includePath>
-	<includePath system="true">src</includePath>
 	<header>include/CinderVideo.h</header>
-	<sourcePattern>include/audiorenderer/*.cpp</sourcePattern>
-	<sourcePattern>include/movierenderer/*.cpp</sourcePattern>
-	<sourcePattern>include/common/*.cpp</sourcePattern>
+	<sourcePattern>src/audiorenderer/*.cpp</sourcePattern>
+	<sourcePattern>src/movierenderer/*.cpp</sourcePattern>
 	<platform os="msw">
 		<staticLibrary>build/lib/msw/avcodec.lib</staticLibrary>
 		<!--staticLibrary>build/lib/msw/avdevice.lib</staticLibrary-->
