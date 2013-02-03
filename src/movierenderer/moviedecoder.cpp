@@ -80,6 +80,7 @@ void MovieDecoder::destroy()
     if (m_pAudioBuffer)
     {
         delete[] m_pAudioBuffer;
+        m_pAudioBuffer = NULL;
     }
 }
 
@@ -100,11 +101,15 @@ bool MovieDecoder::initialize(const string& filename)
         return false;
     }
 
+	try {
 #if LIBAVCODEC_VERSION_MAJOR < 53
-    if (av_find_stream_info(m_pFormatContext) < 0)
+        if (av_find_stream_info(m_pFormatContext) < 0)
 #else
-    if (avformat_find_stream_info(m_pFormatContext, NULL) < 0)
+        if (avformat_find_stream_info(m_pFormatContext, NULL) < 0)
 #endif
+            throw;
+    }
+    catch(...)
     {
         cerr << "could not find stream information" << endl;
         return false;
@@ -205,13 +210,17 @@ bool MovieDecoder::initializeAudio()
         return false;
     }
 
-    m_pAudioCodecContext->workaround_bugs = 1;
-
     // currently we disable ac3 surround
     if (m_pAudioCodecContext->channels > 2)
     {
-        m_pAudioCodecContext->channels = 2;
+        // set to NULL, otherwise avcodec_close(m_pAudioCodecContext) crashes
+        m_pAudioCodecContext = NULL;
+        
+        cerr << "Multi-channel audio not supported" << endl;
+        return false;
     }
+
+    m_pAudioCodecContext->workaround_bugs = 1;
 
 #if LIBAVCODEC_VERSION_MAJOR < 53
     if (avcodec_open(m_pAudioCodecContext, m_pAudioCodec) < 0)
@@ -427,7 +436,7 @@ bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
         frameDecoded = true;
         m_AudioClock = packet.pts * av_q2d(m_pAudioStream->time_base);
 
-        frame.setDataSize(dataSize);
+        frame.setDataSize(bufferSize);
         frame.setFrameData(m_pAudioBuffer);
         frame.setPts(m_AudioClock);
     }

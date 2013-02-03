@@ -20,18 +20,16 @@ public:
 
 	void fileDrop( FileDropEvent event );
 
-	void playVideo( const fs::path &path );
+	bool playVideo( const fs::path &path );
 	void stopVideo();
 private:
-	bool			mIsPlaying;
-
+	AudioRenderer*	mAudioRenderer;
 	MovieDecoder	mMovieDecoder;
 
 	int				mFrameWidth;
 	int				mFrameHeight;
 	Area			mFrameArea;
 
-	double			mAudioClockOffset;
 	double			mAudioClock;
 	double			mVideoClock;
 
@@ -40,12 +38,13 @@ private:
 	gl::Texture		mVPlane;
 
 	gl::GlslProg	mShader;
-
-	Timer			mTimer;
 };
 
 void _TBOX_PREFIX_App::setup()
 {
+	// initialize OpenAL audio renderer
+	mAudioRenderer = AudioRendererFactory::create(AudioRendererFactory::OPENAL_OUTPUT);
+	
 	// load and compile YUV-decoding shader
 	try { mShader = gl::GlslProg( loadAsset("framerender_vert.glsl"), loadAsset("framerender_frag.glsl") ); }
 	catch( const std::exception &e ) { console() << e.what() << std::endl; }
@@ -53,20 +52,23 @@ void _TBOX_PREFIX_App::setup()
 
 void _TBOX_PREFIX_App::update()
 {
-	// video does not run without decoding the audio, for some reason
-	while(true)
+	// decode audio
+	while( mAudioRenderer->hasBufferSpace() )
 	{
 		AudioFrame audioFrame;
 		if( mMovieDecoder.decodeAudioFrame(audioFrame) )
 		{
+			mAudioRenderer->queueFrame(audioFrame);
 		}
 		else
 			break;
 	}
 	
-	mAudioClock = mTimer.getSeconds() + mAudioClockOffset;
+	mAudioRenderer->flushBuffers();
+	mAudioClock = mAudioRenderer->getCurrentPts();
 
-	bool decoded = false;
+	// decode video
+	bool hasVideo = false;
 	int count = 0;
 
 	VideoFrame videoFrame;
@@ -76,35 +78,31 @@ void _TBOX_PREFIX_App::update()
 
 		if( mMovieDecoder.decodeVideoFrame(videoFrame) )
 		{
-			mVideoClock = mMovieDecoder.getVideoClock();
-			if( (mVideoClock - mAudioClock) > 1.0f )
-				mAudioClockOffset = mVideoClock - mAudioClock;
+			mVideoClock = videoFrame.getPts();
 
-			// resize
-			if( videoFrame.getHeight() != mFrameHeight || videoFrame.getWidth() != mFrameWidth )
-			{
-				mFrameWidth = videoFrame.getWidth();
-				mFrameHeight = videoFrame.getHeight();
-				mFrameArea = Area(0, 0, mFrameWidth, mFrameHeight);
-
-				gl::Texture::Format fmt;
-				fmt.setInternalFormat( GL_LUMINANCE );	
-
-				mYPlane = gl::Texture( videoFrame.getYLineSize(), mFrameHeight, fmt );
-				mUPlane = gl::Texture( videoFrame.getULineSize(), mFrameHeight / 2, fmt );
-				mVPlane = gl::Texture( videoFrame.getVLineSize(), mFrameHeight / 2, fmt );
-			}
-
-			decoded = true;
+			hasVideo = true;
 		}
 		else
-		{
 			break;
-		}
 	}
 
-	if( decoded ) 
+	if( hasVideo ) 
 	{
+		// resize textures if needed
+		if( videoFrame.getHeight() != mFrameHeight || videoFrame.getWidth() != mFrameWidth )
+		{
+			mFrameWidth = videoFrame.getWidth();
+			mFrameHeight = videoFrame.getHeight();
+			mFrameArea = Area(0, 0, mFrameWidth, mFrameHeight);
+
+			gl::Texture::Format fmt;
+			fmt.setInternalFormat( GL_LUMINANCE );	
+
+			mYPlane = gl::Texture( videoFrame.getYLineSize(), mFrameHeight, fmt );
+			mUPlane = gl::Texture( videoFrame.getULineSize(), mFrameHeight / 2, fmt );
+			mVPlane = gl::Texture( videoFrame.getVLineSize(), mFrameHeight / 2, fmt );
+		}
+
 		// upload texture data
 		if( mYPlane ) {
 			glBindTexture( mYPlane.getTarget(), mYPlane.getId() );
@@ -167,43 +165,44 @@ void _TBOX_PREFIX_App::fileDrop( FileDropEvent event )
 {
 	stopVideo();
 
-	for( size_t i=0; i<event.getNumFiles() && !mIsPlaying; ++i )
-		playVideo( event.getFile(i) );
+	// play the first video file found
+	bool isPlaying = false;
+	for( size_t i=0; i<event.getNumFiles() && !isPlaying; ++i )
+		isPlaying = playVideo( event.getFile(i) );
 }
 
-void _TBOX_PREFIX_App::playVideo( const fs::path &path )
+bool _TBOX_PREFIX_App::playVideo( const fs::path &path )
 {
 	stopVideo();
 
 	if( mMovieDecoder.initialize( path.generic_string() ) )
 	{
-		console() << "Playing " << path.generic_string() << std::endl;
+		mAudioRenderer->setFormat( mMovieDecoder.getAudioFormat() );
 
 		mMovieDecoder.start();
-		mIsPlaying = true;		
 
-		// initialize time
-		mAudioClockOffset = 0.0;
-		mAudioClock = 0.0;
-		mVideoClock = 0.0;
+		mVideoClock = mMovieDecoder.getVideoClock();
+		mAudioClock = mMovieDecoder.getAudioClock();
 
-		mTimer.start();
+		return true;
 	}
 	else
 	{
         console() << "Failed to open " << path.generic_string() << std::endl;
-
-		stopVideo();
 	}
+
+	return false;
 }
 
 void _TBOX_PREFIX_App::stopVideo()
 {
-	if( mIsPlaying )
-	{
-		mIsPlaying = false;
-		mMovieDecoder.destroy();
-	}
+	mMovieDecoder.stop();
+	mAudioRenderer->stop();
+
+	mVideoClock = 0.0;
+	mAudioClock = 0.0;
+
+	mMovieDecoder.destroy();
 }
 
 CINDER_APP_NATIVE( _TBOX_PREFIX_App, RendererGl )

@@ -12,6 +12,10 @@
 	<supports os="msw" />
 	<includePath>include</includePath>
 	<header>include/CinderVideo.h</header>
+	<sourcePattern>include/common/*.h</sourcePattern>
+	<sourcePattern>include/audiorenderer/*.h</sourcePattern>
+	<sourcePattern>include/movierenderer/*.h</sourcePattern>
+	<sourcePattern>src/common/*.cpp</sourcePattern>
 	<sourcePattern>src/audiorenderer/*.cpp</sourcePattern>
 	<sourcePattern>src/movierenderer/*.cpp</sourcePattern>
 	<platform os="msw">
@@ -23,6 +27,7 @@
 		<!--staticLibrary>build/lib/msw/postproc.lib</staticLibrary-->
 		<staticLibrary>build/lib/msw/swresample.lib</staticLibrary>
 		<staticLibrary>build/lib/msw/swscale.lib</staticLibrary>
+		<staticLibrary>build/lib/msw/openal32.lib</staticLibrary>
 		
 		<buildCopy>build/bin/msw/avcodec-54.dll</buildCopy>
 		<!--buildCopy>build/bin/msw/avdevice-54.dll</buildCopy-->
@@ -32,6 +37,7 @@
 		<!--buildCopy>build/bin/msw/postproc-52.dll</buildCopy-->
 		<buildCopy>build/bin/msw/swresample-0.dll</buildCopy>
 		<buildCopy>build/bin/msw/swscale-2.dll</buildCopy>
+		<buildCopy>build/bin/msw/openal32.dll</buildCopy>
 	</platform>
 </block>
 <template>templates/Basic Video/template.xml</template>
