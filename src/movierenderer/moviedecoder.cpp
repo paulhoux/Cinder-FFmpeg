@@ -97,8 +97,7 @@ bool MovieDecoder::initialize(const string& filename)
     if (avformat_open_input(&m_pFormatContext, filename.c_str(), NULL, NULL) != 0)
 #endif
     {
-        cerr << "Could not open input file: " << filename.c_str() << endl;
-        return false;
+        throw logic_error("MovieDecoder: Could not open input file");
     }
 
 	try {
@@ -111,8 +110,7 @@ bool MovieDecoder::initialize(const string& filename)
     }
     catch(...)
     {
-        cerr << "could not find stream information" << endl;
-        return false;
+        throw logic_error("MovieDecoder: Could not find stream information");
     }
 
 #ifdef _DEBUG
@@ -144,8 +142,7 @@ bool MovieDecoder::initializeVideo()
 
     if (m_VideoStream == -1)
     {
-        cerr << "Could not find video stream" << endl;
-        return false;
+        throw logic_error("MovieDecoder: Could not find video stream");
     }
 
     m_pVideoCodecContext = m_pFormatContext->streams[m_VideoStream]->codec;
@@ -155,8 +152,7 @@ bool MovieDecoder::initializeVideo()
     {
         // set to NULL, otherwise avcodec_close(m_pVideoCodecContext) crashes
         m_pVideoCodecContext = NULL;
-        cerr << "Video Codec not found" << endl;
-        return false;
+        throw logic_error("MovieDecoder: Video Codec not found");
     }
 
     m_pVideoCodecContext->workaround_bugs = 1;
@@ -168,8 +164,7 @@ bool MovieDecoder::initializeVideo()
     if (avcodec_open2(m_pVideoCodecContext, m_pVideoCodec, NULL) < 0)
 #endif
     {
-        cerr << "Could not open video codec" << endl;
-        return false;
+        throw logic_error("MovieDecoder: Could not open video codec");
     }
 
     m_pFrame = avcodec_alloc_frame();
@@ -195,8 +190,7 @@ bool MovieDecoder::initializeAudio()
 
     if (m_AudioStream == -1)
     {
-        cerr << "No audiostream found" << endl;
-        return false;
+        throw logic_error("MovieDecoder: No audiostream found");
     }
 
     m_pAudioCodecContext = m_pFormatContext->streams[m_AudioStream]->codec;
@@ -206,18 +200,7 @@ bool MovieDecoder::initializeAudio()
     {
         // set to NULL, otherwise avcodec_close(m_pAudioCodecContext) crashes
         m_pAudioCodecContext = NULL;
-        cerr << "Audio Codec not found" << endl;
-        return false;
-    }
-
-    // currently we disable ac3 surround
-    if (m_pAudioCodecContext->channels > 2)
-    {
-        // set to NULL, otherwise avcodec_close(m_pAudioCodecContext) crashes
-        m_pAudioCodecContext = NULL;
-        
-        cerr << "Multi-channel audio not supported" << endl;
-        return false;
+        throw logic_error("MovieDecoder: Audio Codec not found");
     }
 
     m_pAudioCodecContext->workaround_bugs = 1;
@@ -228,8 +211,7 @@ bool MovieDecoder::initializeAudio()
     if (avcodec_open2(m_pAudioCodecContext, m_pAudioCodec, NULL) < 0)
 #endif
     {
-        cerr << "Could not open audio codec" << endl;
-        return false;
+        throw logic_error("MovieDecoder: Could not open audio codec");
     }
 
     m_pAudioBuffer = new ::uint8_t[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
@@ -353,7 +335,7 @@ void MovieDecoder::convertVideoFrame(PixelFormat format)
 
     if (NULL == scaleContext)
     {
-        throw logic_error("Failed to create resize context");
+        throw logic_error("MovieDecoder: Failed to create resize context");
     }
 
     AVFrame* convertedFrame = NULL;

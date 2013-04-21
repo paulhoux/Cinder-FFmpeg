@@ -3,6 +3,7 @@
 
 #include <AL/al.h>
 #include <AL/alc.h>
+#include <AL/alext.h>
 
 #include <deque>
 #include "audiorenderer.h"
@@ -40,6 +41,7 @@ private:
     int                 m_CurrentBuffer;
     float               m_Volume;
     ALenum              m_AudioFormat;
+	ALsizei				m_NumChannels;
     ALsizei             m_Frequency;
 
     std::deque<double>  m_PtsQueue;

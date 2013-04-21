@@ -20,6 +20,7 @@ OpenALRenderer::OpenALRenderer()
 , m_CurrentBuffer(0)
 , m_Volume(1.f)
 , m_AudioFormat(AL_FORMAT_STEREO16)
+, m_NumChannels(0)
 , m_Frequency(0)
 {
     m_pAudioDevice = alcOpenDevice(NULL);
@@ -51,18 +52,65 @@ OpenALRenderer::~OpenALRenderer()
 
 void OpenALRenderer::setFormat(const AudioFormat& format)
 {
-    switch (format.bits)
-    {
-    case 8:
-        m_AudioFormat = format.numChannels == 1 ? AL_FORMAT_MONO8 : AL_FORMAT_STEREO8;
-        break;
-    case 16:
-        m_AudioFormat = format.numChannels == 1 ? AL_FORMAT_MONO16 : AL_FORMAT_STEREO16;
-        break;
-    default:
-        throw logic_error("OpenAlRenderer: unsupported format");
-    }
+	switch (format.bits)
+	{
+	case 8:
+		switch(format.numChannels)
+		{
+		case 1:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_MONO8");
+			break;
+		case 2:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_STEREO8");
+			break;
+		case 4:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_QUAD8");
+			break;
+		case 6:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_51CHN8");
+			break;
+		case 7:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_61CHN8");
+			break;
+		case 8:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_71CHN8");
+			break;
+		}
 
+		if(alGetError() != AL_NO_ERROR)
+			throw logic_error("OpenAlRenderer: unsupported format");
+		break;
+	case 16:
+		switch(format.numChannels)
+		{
+		case 1:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_MONO16");
+			break;
+		case 2:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_STEREO16");
+			break;
+		case 4:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_QUAD16");
+			break;
+		case 6:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_51CHN16");
+			break;
+		case 7:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_61CHN16");
+			break;
+		case 8:
+			m_AudioFormat = alGetEnumValue("AL_FORMAT_71CHN16");
+			break;
+		}
+
+		if(alGetError() != AL_NO_ERROR)
+			throw logic_error("OpenAlRenderer: unsupported format");
+		break;
+	default:
+		throw logic_error("OpenAlRenderer: unsupported format");
+	}
+
+	m_NumChannels = format.numChannels;
     m_Frequency = format.rate;
 }
 
