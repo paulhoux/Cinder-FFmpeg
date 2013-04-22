@@ -12,6 +12,8 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 
+#include "cinder/App/AppBasic.h"
+
 #define VIDEO_QUEUESIZE 20
 #define AUDIO_QUEUESIZE 50
 #define VIDEO_FRAMES_BUFFERSIZE 5
@@ -30,7 +32,9 @@ MovieDecoder::MovieDecoder()
 , m_pVideoStream(NULL)
 , m_pAudioStream(NULL)
 , m_pAudioBuffer(NULL)
+, m_pAudioBufferTemp(NULL)
 , m_pFrame(NULL)
+, m_pSwrContext(NULL)
 , m_MaxVideoQueueSize(VIDEO_QUEUESIZE)
 , m_MaxAudioQueueSize(AUDIO_QUEUESIZE)
 , m_pPacketReaderThread(NULL)
@@ -77,11 +81,20 @@ void MovieDecoder::destroy()
 #endif
     }
 
-    if (m_pAudioBuffer)
+    if (m_pAudioBufferTemp)
+    {
+        delete[] m_pAudioBufferTemp;
+        m_pAudioBufferTemp = NULL;
+    }
+
+	if (m_pAudioBuffer)
     {
         delete[] m_pAudioBuffer;
         m_pAudioBuffer = NULL;
     }
+
+	if( m_pSwrContext ) 
+		swr_free(&m_pSwrContext);
 }
 
 bool MovieDecoder::initialize(const string& filename)
@@ -215,6 +228,7 @@ bool MovieDecoder::initializeAudio()
     }
 
     m_pAudioBuffer = new ::uint8_t[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
+	m_pAudioBufferTemp = new ::uint8_t[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
 
     return true;
 }
@@ -264,7 +278,7 @@ void MovieDecoder::seek(int offset)
         timestamp = 0;
     }
 
-    cout << "av_gettime: " << timestamp << " timebase " << AV_TIME_BASE << " " << flags << endl;
+    ci::app::console() << "av_gettime: " << timestamp << " timebase " << AV_TIME_BASE << " " << flags << endl;
     int ret = av_seek_frame(m_pFormatContext, -1, timestamp, flags);
 
     if (ret >= 0)
@@ -282,7 +296,7 @@ void MovieDecoder::seek(int offset)
     }
     else
     {
-        cerr << "Error seeking to position: " << timestamp << endl;
+        ci::app::console() << "Error seeking to position: " << timestamp << endl;
     }
 }
 
@@ -308,11 +322,13 @@ bool MovieDecoder::decodeVideoFrame(VideoFrame& frame)
                               m_pVideoCodecContext->height);
     }
 
-
-    if (m_pVideoCodecContext->pix_fmt != PIX_FMT_YUV420P)
-    {
-        convertVideoFrame(PIX_FMT_YUV420P);
-    }
+	try {
+		if (m_pVideoCodecContext->pix_fmt != PIX_FMT_YUV420P && m_pVideoCodecContext->pix_fmt != PIX_FMT_YUVJ420P)
+			convertVideoFrame(PIX_FMT_YUV420P);
+	}
+	catch(std::exception &e) {
+		return false;
+	}
 
     m_VideoClock = packet.dts * av_q2d(m_pVideoStream->time_base);
 
@@ -334,9 +350,7 @@ void MovieDecoder::convertVideoFrame(PixelFormat format)
                                               format, 0, NULL, NULL, NULL);
 
     if (NULL == scaleContext)
-    {
         throw logic_error("MovieDecoder: Failed to create resize context");
-    }
 
     AVFrame* convertedFrame = NULL;
     createAVFrame(&convertedFrame, m_pVideoCodecContext->width, m_pVideoCodecContext->height, format);
@@ -367,7 +381,7 @@ bool MovieDecoder::decodeVideoPacket(AVPacket& packet)
     av_free_packet(&packet);
     if (bytesDecoded < 0)
     {
-        cerr << "Failed to decode video frame: bytesDecoded < 0" << endl;
+        ci::app::console() << "Failed to decode video frame: bytesDecoded < 0" << endl;
     }
 
     return frameFinished > 0;
@@ -395,16 +409,25 @@ bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
     while(bytesRemaining > 0)
     {
         int bytesDecoded;
+		
+		if(m_pSwrContext)
+		{
+			mutex::scoped_lock lock(m_DecodeAudioMutex);
+            bytesDecoded = avcodec_decode_audio3(m_pAudioStream->codec,
+												(::int16_t *)m_pAudioBufferTemp,
+                                                &bufferSize, &packet);
+		}
+		else
         {
             mutex::scoped_lock lock(m_DecodeAudioMutex);
             bytesDecoded = avcodec_decode_audio3(m_pAudioStream->codec,
-                                                (::int16_t *)m_pAudioBuffer,
+												(::int16_t *)m_pAudioBuffer,
                                                 &bufferSize, &packet);
         }
 
         if (bytesDecoded < 0)
         {
-            cerr << "Error decoding audio frame" << endl;
+            ci::app::console() << "Error decoding audio frame" << endl;
             break;
         }
 
@@ -415,12 +438,17 @@ bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
             continue;
         }
 
-        frameDecoded = true;
+		if(m_pSwrContext)
+		{
+			swr_convert(m_pSwrContext, &m_pAudioBuffer, bufferSize, (const uint8_t**) &m_pAudioBufferTemp, bufferSize); 
+		}
+
+		frameDecoded = true;
         m_AudioClock = packet.pts * av_q2d(m_pAudioStream->time_base);
 
         frame.setDataSize(bufferSize);
         frame.setFrameData(m_pAudioBuffer);
-        frame.setPts(m_AudioClock);
+        frame.setPts(m_AudioClock);		
     }
 
     av_free_packet(&packet);
@@ -568,6 +596,23 @@ AudioFormat MovieDecoder::getAudioFormat()
     case AV_SAMPLE_FMT_S32:
         format.bits = 32;
         break;
+	/*case AV_SAMPLE_FMT_FLTP:
+		format.bits = 16;
+
+		// we have to resample the audio, so let's setup libswresample now
+		m_pSwrContext = swr_alloc_set_opts(m_pSwrContext, 
+			m_pAudioCodecContext->channel_layout,
+			AV_SAMPLE_FMT_S16,
+			m_pAudioCodecContext->sample_rate,
+			m_pAudioCodecContext->channel_layout,
+			AV_SAMPLE_FMT_FLTP,
+			m_pAudioCodecContext->sample_rate,
+			0,
+			NULL);
+
+		swr_init(m_pSwrContext);
+
+		break;*/
     default:
         format.bits = 0;
     }
@@ -576,7 +621,7 @@ AudioFormat MovieDecoder::getAudioFormat()
     format.numChannels      = m_pAudioCodecContext->channels;
     format.framesPerPacket  = m_pAudioCodecContext->frame_size;
 
-    cout << "Audio format: rate (" <<  format.rate << ") numChannels (" << format.numChannels << ")" << endl;
+    ci::app::console() << "Audio format: rate (" <<  format.rate << ") numChannels (" << format.numChannels << ")" << endl;
 
     return format;
 }
