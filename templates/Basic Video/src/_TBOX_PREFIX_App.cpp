@@ -175,8 +175,10 @@ bool _TBOX_PREFIX_App::playVideo( const fs::path &path )
 {
 	stopVideo();
 
-	if( mMovieDecoder.initialize( path.generic_string() ) )
-	{
+	try {
+		if( !mMovieDecoder.initialize( path.generic_string() ) )
+			throw logic_error("MovieDecoder: Failed to initialize");
+
 		mAudioRenderer->setFormat( mMovieDecoder.getAudioFormat() );
 
 		mMovieDecoder.start();
@@ -186,9 +188,9 @@ bool _TBOX_PREFIX_App::playVideo( const fs::path &path )
 
 		return true;
 	}
-	else
+	catch( std::exception &e )
 	{
-        console() << "Failed to open " << path.generic_string() << std::endl;
+        console() << "Failed to open " << path.generic_string() << "\n" << e.what() << std::endl;
 	}
 
 	return false;
