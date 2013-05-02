@@ -1,10 +1,10 @@
-Cinder-Video
+Cinder-LibAV
 ================
 
-Cinder block for playing video using the FFmpeg and OpenAL libraries
+Cinder block for playing video using the Libavcodec and OpenAL libraries
 
 
-Included is the Windows distribution of FFmpeg (the version of November 25th, 2012) and OpenAL 1.1. Please refer to the [FFmpeg website](http://www.ffmpeg.org/) for more information on licensing. As a special warning, it should be noted that FFmpeg is not available under any other licensing terms, especially not proprietary/commercial ones, not even in exchange for payment.
+Included is the Windows distribution of Libavcodec (the version of November 25th, 2012) and OpenAL 1.1. Please refer to the [FFmpeg website](http://www.ffmpeg.org/) for more information on licensing. As a special warning, it should be noted that FFmpeg is not available under any other licensing terms, especially not proprietary/commercial ones, not even in exchange for payment.
 
 
 #####Adding this block to Cinder
