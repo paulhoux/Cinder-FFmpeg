@@ -14,25 +14,25 @@ Included is the Windows distribution of Libavcodec (the version of November 25th
 
 
 #####Adding this block to Cinder
-This block is meant to be used with the most recent development version of Cinder. See for more information on how to obtain this version:
-https://forum.libcinder.org/#Topic/23286000001389463
+This block is meant to be used with version 0.8.5 of Cinder. See for more information on how to obtain this version:
+http://libcinder.org/download/
 
 Cinder's tool for setting up empty projects, TinderBox, has been revamped and now supports a neat system for the management of plug-ins called Cinder Blocks. This Video block supports this new feature. To add this block to your copy of Cinder, so it will be detected automatically by TinderBox:
 * Open a command window (or Terminal)
 * Switch to the disk containing the Cinder root folder, e.g.: ```d:```
 * Browse to the Cinder root folder: ```cd path\to\cinder_master```
-* Add the Video block to the blocks folder: ```git clone https://github.com/paulhoux/Cinder-Video.git blocks/Video```
+* Add the Video block to the blocks folder: ```git clone https://github.com/paulhoux/Cinder-LibAV.git blocks/LibAV```
 
-Alternatively, you can download the repository as a [ZIP-file](https://github.com/paulhoux/Cinder-Video/zipball/master) and manually add the files to a "cinder_master\blocks\Video" folder.
+Alternatively, you can download the repository as a [ZIP-file](https://github.com/paulhoux/Cinder-LibAV/zipball/master) and manually add the files to a "cinder_master\blocks\Video" folder.
 
 
 #####Creating a sample application using Tinderbox
 For more information on how to use the block with TinderBox, please follow this link:
-https://forum.libcinder.org/#Topic/23286000001392019
+http://libcinder.org/docs/welcome/TinderBox.html
 
 
 #####Copyright notice
-Copyright (c) 2010-2012, Paul Houx - All rights reserved.
+Copyright (c) 2010-2013, Paul Houx - All rights reserved.
 Portions of this code (c) Dirk van den Boer
 This code is intended for use with the Cinder C++ library: http://libcinder.org
 
