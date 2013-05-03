@@ -21,9 +21,9 @@ Cinder's tool for setting up empty projects, TinderBox, has been revamped and no
 * Open a command window (or Terminal)
 * Switch to the disk containing the Cinder root folder, e.g.: ```d:```
 * Browse to the Cinder root folder: ```cd path\to\cinder_master```
-* Add the Video block to the blocks folder: ```git clone https://github.com/paulhoux/Cinder-LibAV.git blocks/LibAV```
+* Add the Video block to the blocks folder: ```git clone https://github.com/paulhoux/Cinder-FFmpeg.git blocks/FFmpeg```
 
-Alternatively, you can download the repository as a [ZIP-file](https://github.com/paulhoux/Cinder-LibAV/zipball/master) and manually add the files to a "cinder_master\blocks\Video" folder.
+Alternatively, you can download the repository as a [ZIP-file](https://github.com/paulhoux/Cinder-FFmpeg/zipball/master) and manually add the files to a "cinder_master\blocks\Video" folder.
 
 
 #####Creating a sample application using Tinderbox
