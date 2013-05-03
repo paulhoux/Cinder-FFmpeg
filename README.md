@@ -1,7 +1,7 @@
-Cinder-LibAV
+Cinder-FFmpeg
 ================
 
-Cinder block for playing video using the Libavcodec and OpenAL libraries
+Cinder block for playing video using FFmpeg's Libavcodec and the OpenAL libraries
 
 
 Included is the Windows distribution of Libavcodec (the version of November 25th, 2012) and OpenAL 1.1. Please refer to the [FFmpeg website](http://www.ffmpeg.org/) for more information on licensing. As a special warning, it should be noted that FFmpeg is not available under any other licensing terms, especially not proprietary/commercial ones, not even in exchange for payment.
@@ -31,10 +31,11 @@ For more information on how to use the block with TinderBox, please follow this 
 http://libcinder.org/docs/welcome/TinderBox.html
 
 
-#####Copyright notice
-Copyright (c) 2010-2013, Paul Houx - All rights reserved.
-Portions of this code (c) Dirk van den Boer
-This code is intended for use with the Cinder C++ library: http://libcinder.org
+#####Copyright notice and acknowledgements
+Copyright (c) 2010-2013, Paul Houx - All rights reserved. This code is intended for use with the Cinder C++ library: http://libcinder.org
+
+Portions of this code: (c) [Dirk van den Boer](https://code.google.com/p/glover/). Portions of this code based on [Zeranoe's FFmpeg build for Windows](http://ffmpeg.zeranoe.com/). 
+
 
 Redistribution and use in source and binary forms, with or without modification, are permitted provided that the following conditions are met:
 
