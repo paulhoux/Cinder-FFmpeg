@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <cinder>
-<template name="Video: Basic" parent="org.libcinder.apptemplates.basicopengl">
-	<requires>nl.cowlumbus.video</requires>
+<template name="FFmpeg: Basic" parent="org.libcinder.apptemplates.basicopengl">
+	<requires>nl.cowlumbus.ffmpeg</requires>
 	<source replaceContents="true" replaceName="true">src/_TBOX_PREFIX_App.cpp</source>
 	<asset>assets/framerender_vert.glsl</asset>
 	<asset>assets/framerender_frag.glsl</asset>

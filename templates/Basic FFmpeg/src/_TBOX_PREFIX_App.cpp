@@ -6,7 +6,7 @@
 #include "cinder/gl/Texture.h"
 #include "cinder/Timer.h"
 
-#include "CinderVideo.h"
+#include "CinderFFmpeg.h"
 
 using namespace ci;
 using namespace ci::app;

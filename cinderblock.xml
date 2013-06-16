@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <cinder>
 <block
-	name="Video"
-	id="nl.cowlumbus.video"
+	name="FFmpeg"
+	id="nl.cowlumbus.ffmpeg"
 	author="Paul Houx"
 	license="GPL, Commercial"
-	summary="Digital video decoder for Cinder"
-	url="https://github.com/paulhoux/Cinder-Video"
-	git="git://github.com/paulhoux/Cinder-Video.git"
+	summary="Digital video decoder for Cinder, based on FFmpeg's libavcodec library."
+	url="https://github.com/paulhoux/Cinder-FFmpeg"
+	git="git://github.com/paulhoux/Cinder-FFmpeg.git"
 	>
 	<supports os="msw" />
 	<includePath>include</includePath>
-	<header>include/CinderVideo.h</header>
+	<header>include/CinderFFmpeg.h</header>
 	<sourcePattern>include/common/*.h</sourcePattern>
 	<sourcePattern>include/audiorenderer/*.h</sourcePattern>
 	<sourcePattern>include/movierenderer/*.h</sourcePattern>
@@ -40,5 +40,5 @@
 		<buildCopy>build/bin/msw/openal32.dll</buildCopy>
 	</platform>
 </block>
-<template>templates/Basic Video/template.xml</template>
+<template>templates/Basic FFmpeg/template.xml</template>
 </cinder>
