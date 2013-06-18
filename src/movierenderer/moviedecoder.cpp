@@ -105,8 +105,13 @@ bool MovieDecoder::initialize(const string& filename)
     bool ok = true;
 	m_bInitialized = false;
 
-    av_register_all();
-    avcodec_register_all();
+	static bool libavcodec_initialized = false;
+	if( ! libavcodec_initialized )
+	{
+		libavcodec_initialized = true;
+		av_register_all();
+		avcodec_register_all();
+	}
     
 #if LIBAVCODEC_VERSION_MAJOR < 53
     if (av_open_input_file(&m_pFormatContext, filename.c_str(), NULL, 0, NULL) != 0)

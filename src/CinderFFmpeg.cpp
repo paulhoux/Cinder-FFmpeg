@@ -1,14 +1,16 @@
-#include "MovieGl.h"
-
+#include "CinderFFmpeg.h"
+#include "cinder/app/AppBasic.h"
 
 using namespace ci;
-using namespace ph::ffmpeg;
+
+namespace ph { namespace ffmpeg {
 
 MovieGl::MovieGl(void) :
 	mWidth(0),
 	mHeight(0),
 	mDuration(0.0f)
 {
+	app::console() << "Constructor called" << std::endl;
 	// initialize OpenAL audio renderer
 	mAudioRenderer = AudioRendererFactory::create(AudioRendererFactory::OPENAL_OUTPUT);
 }
@@ -18,6 +20,7 @@ MovieGl::MovieGl( const fs::path &path ) :
 	mHeight(0),
 	mDuration(0.0f)
 {
+	app::console() << "Constructor called" << std::endl;
 	//stop();
 
 	if( !mMovieDecoder.initialize( path.generic_string() ) )
@@ -33,6 +36,7 @@ MovieGl::MovieGl( const fs::path &path ) :
 
 MovieGl::~MovieGl()
 {
+	app::console() << "Deconstructor called" << std::endl;
 	stop();
 
 	mMovieDecoder.destroy();
@@ -46,7 +50,23 @@ MovieGl::~MovieGl()
 const gl::Texture MovieGl::getTexture() 
 {
 	if( !mMovieDecoder.isInitialized() )
-		return gl::Texture();
+		return mTexture;
+	
+	// decode audio 
+	while( mAudioRenderer->hasBufferSpace() )
+	{
+		AudioFrame audioFrame;
+		if( mMovieDecoder.decodeAudioFrame(audioFrame) )
+		{
+			mAudioRenderer->queueFrame(audioFrame);
+		}
+		else
+			break;
+	}
+	
+	// 
+	mAudioRenderer->flushBuffers();
+	mAudioClock = mAudioRenderer->getCurrentPts();
 
 	// decode video
 	bool hasVideo = false;
@@ -66,6 +86,9 @@ const gl::Texture MovieGl::getTexture()
 		else
 			break;
 	}
+
+	if(count > 1)
+		app::console() << "Skipped " << (count-1) << " frames!" << std::endl;
 
 	if( hasVideo ) 
 	{
@@ -150,10 +173,11 @@ const gl::Texture MovieGl::getTexture()
 			glPopAttrib();
 		}
 		mFbo.unbindFramebuffer();
-	}
 
-	//
-	return mFbo.getTexture();
+		mTexture = gl::Texture( mFbo.getTexture() );
+	}	
+
+	return mTexture;
 }
 
 bool MovieGl::checkNewFrame()
@@ -163,22 +187,6 @@ bool MovieGl::checkNewFrame()
 
 	if( ! mMovieDecoder.isInitialized() )
 		return false;
-
-	// decode audio (TODO: this shouldn't rely on someone calling checkNewFrame() )
-	while( mAudioRenderer->hasBufferSpace() )
-	{
-		AudioFrame audioFrame;
-		if( mMovieDecoder.decodeAudioFrame(audioFrame) )
-		{
-			mAudioRenderer->queueFrame(audioFrame);
-		}
-		else
-			break;
-	}
-	
-	// 
-	mAudioRenderer->flushBuffers();
-	mAudioClock = mAudioRenderer->getCurrentPts();
 
 	//
 	return ( mMovieDecoder.getVideoClock() < mAudioRenderer->getCurrentPts() );	
@@ -271,3 +279,5 @@ void MovieGl::initializeShader()
 
 	mShader = gl::GlslProg( vs, fs );
 }
+
+} } // namespace ph::ffmpeg

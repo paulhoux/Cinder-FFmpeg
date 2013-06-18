@@ -10,201 +10,104 @@
 
 using namespace ci;
 using namespace ci::app;
+using namespace ph;
 using namespace std;
 
 class _TBOX_PREFIX_App : public AppNative {
 public:
 	void setup();
+	
+	void keyDown( KeyEvent event );
+	void fileDrop( FileDropEvent event );
+
 	void update();
 	void draw();
 
-	void fileDrop( FileDropEvent event );
-
-	bool playVideo( const fs::path &path );
-	void stopVideo();
+	void loadMovieFile( const fs::path &path );
 private:
-	AudioRenderer*	mAudioRenderer;
-	MovieDecoder	mMovieDecoder;
-
-	int				mFrameWidth;
-	int				mFrameHeight;
-	Area			mFrameArea;
-
-	double			mAudioClock;
-	double			mVideoClock;
-
-	gl::Texture		mYPlane;
-	gl::Texture		mUPlane;
-	gl::Texture		mVPlane;
-
-	gl::GlslProg	mShader;
+	gl::Texture			mFrameTexture;
+	ffmpeg::MovieGlRef	mMovie;
 };
 
 void _TBOX_PREFIX_App::setup()
 {
-	// initialize OpenAL audio renderer
-	mAudioRenderer = AudioRendererFactory::create(AudioRendererFactory::OPENAL_OUTPUT);
-	
-	// load and compile YUV-decoding shader
-	try { mShader = gl::GlslProg( loadAsset("framerender_vert.glsl"), loadAsset("framerender_frag.glsl") ); }
-	catch( const std::exception &e ) { console() << e.what() << std::endl; }
+	fs::path moviePath = getOpenFilePath();
+	if( ! moviePath.empty() )
+		loadMovieFile( moviePath );
 }
 
-void _TBOX_PREFIX_App::update()
+void _TBOX_PREFIX_App::keyDown( KeyEvent event )
 {
-	// decode audio
-	while( mAudioRenderer->hasBufferSpace() )
-	{
-		AudioFrame audioFrame;
-		if( mMovieDecoder.decodeAudioFrame(audioFrame) )
-		{
-			mAudioRenderer->queueFrame(audioFrame);
-		}
-		else
-			break;
+	if( event.getChar() == 'f' ) {
+		setFullScreen( ! isFullScreen() );
 	}
-	
-	mAudioRenderer->flushBuffers();
-	mAudioClock = mAudioRenderer->getCurrentPts();
-
-	// decode video
-	bool hasVideo = false;
-	int count = 0;
-
-	VideoFrame videoFrame;
-	while( mVideoClock < mAudioClock && count < 10 )
-	{
-		++count;
-
-		if( mMovieDecoder.decodeVideoFrame(videoFrame) )
-		{
-			mVideoClock = videoFrame.getPts();
-
-			hasVideo = true;
-		}
-		else
-			break;
+	else if( event.getChar() == 'o' ) {
+		fs::path moviePath = getOpenFilePath();
+		if( ! moviePath.empty() )
+			loadMovieFile( moviePath );
 	}
-
-	if( hasVideo ) 
-	{
-		// resize textures if needed
-		if( videoFrame.getHeight() != mFrameHeight || videoFrame.getWidth() != mFrameWidth )
-		{
-			mFrameWidth = videoFrame.getWidth();
-			mFrameHeight = videoFrame.getHeight();
-			mFrameArea = Area(0, 0, mFrameWidth, mFrameHeight);
-
-			gl::Texture::Format fmt;
-			fmt.setInternalFormat( GL_LUMINANCE );	
-
-			mYPlane = gl::Texture( videoFrame.getYLineSize(), mFrameHeight, fmt );
-			mUPlane = gl::Texture( videoFrame.getULineSize(), mFrameHeight / 2, fmt );
-			mVPlane = gl::Texture( videoFrame.getVLineSize(), mFrameHeight / 2, fmt );
-		}
-
-		// upload texture data
-		if( mYPlane ) {
-			glBindTexture( mYPlane.getTarget(), mYPlane.getId() );
-			glTexSubImage2D( mYPlane.getTarget(), 0, 
-				0, 0, mYPlane.getWidth(), mYPlane.getHeight(), 
-				GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame.getYPlane() );
-		}
-		
-		if( mUPlane ) {
-			glBindTexture( mUPlane.getTarget(), mUPlane.getId() );
-			glTexSubImage2D( mUPlane.getTarget(), 0, 
-				0, 0, mUPlane.getWidth(), mUPlane.getHeight(), 
-				GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame.getUPlane() );
-		}
-		
-		if( mVPlane ) {
-			glBindTexture( mVPlane.getTarget(), mVPlane.getId() );
-			glTexSubImage2D( mVPlane.getTarget(), 0, 
-				0, 0, mVPlane.getWidth(), mVPlane.getHeight(), 
-				GL_LUMINANCE, GL_UNSIGNED_BYTE, videoFrame.getVPlane() );
-		}
-
-		glBindTexture( GL_TEXTURE_2D, 0 );
-	}
+	//else if( event.getChar() == '1' )
+	//	mMovie->setRate( 0.5f );
+	//else if( event.getChar() == '2' )
+	//	mMovie->setRate( 2 );
 }
 
-void _TBOX_PREFIX_App::draw()
+void _TBOX_PREFIX_App::loadMovieFile( const fs::path &moviePath )
 {
-	// 
-	gl::clear();
+	try {
+		// load up the movie, set it to loop, and begin playing
+		mMovie.reset();
+		mMovie = ffmpeg::MovieGl::create( moviePath );
+		//mMovie->setLoop();
+		mMovie->play();
+		
+		/*// create a texture for showing some info about the movie
+		TextLayout infoText;
+		infoText.clear( ColorA( 0.2f, 0.2f, 0.2f, 0.5f ) );
+		infoText.setColor( Color::white() );
+		infoText.addCenteredLine( moviePath.filename().string() );
+		infoText.addLine( toString( mMovie->getWidth() ) + " x " + toString( mMovie->getHeight() ) + " pixels" );
+		infoText.addLine( toString( mMovie->getDuration() ) + " seconds" );
+		infoText.addLine( toString( mMovie->getNumFrames() ) + " frames" );
+		infoText.addLine( toString( mMovie->getFramerate() ) + " fps" );
+		infoText.setBorder( 4, 2 );
+		mInfoTexture = gl::Texture( infoText.render( true ) );*/
+	}
+	catch( ... ) {
+		console() << "Unable to load the movie." << std::endl;
+		mMovie.reset();
+		//mInfoTexture.reset();
+	}
 
-	//
-	if( ! mShader ) return;
-	if( ! mYPlane ) return;
-	if( ! mUPlane ) return;
-	if( ! mVPlane ) return;
-
-	//
-	mShader.bind();
-	mShader.uniform("texUnit1", 0);
-	mShader.uniform("texUnit2", 1);
-	mShader.uniform("texUnit3", 2);
-	mShader.uniform("brightness", 0.0f);
-	mShader.uniform("gamma", 1.0f);
-	mShader.uniform("contrast", 1.0f);
-
-	//
-	Area area = Area::proportionalFit( mFrameArea, getWindowBounds(), true, true );
-
-	//
-	mUPlane.bind(1);
-	mVPlane.bind(2);
-	gl::draw( mYPlane, mFrameArea, area );
-
-	//
-	mShader.unbind();
+	mFrameTexture.reset();
 }
 
 void _TBOX_PREFIX_App::fileDrop( FileDropEvent event )
 {
-	stopVideo();
-
-	// play the first video file found
-	bool isPlaying = false;
-	for( size_t i=0; i<event.getNumFiles() && !isPlaying; ++i )
-		isPlaying = playVideo( event.getFile(i) );
+	loadMovieFile( event.getFile( 0 ) );
 }
 
-bool _TBOX_PREFIX_App::playVideo( const fs::path &path )
+void _TBOX_PREFIX_App::update()
 {
-	stopVideo();
-
-	try {
-		if( !mMovieDecoder.initialize( path.generic_string() ) )
-			throw logic_error("MovieDecoder: Failed to initialize");
-
-		mAudioRenderer->setFormat( mMovieDecoder.getAudioFormat() );
-
-		mMovieDecoder.start();
-
-		mVideoClock = mMovieDecoder.getVideoClock();
-		mAudioClock = mMovieDecoder.getAudioClock();
-
-		return true;
-	}
-	catch( std::exception &e )
-	{
-        console() << "Failed to open " << path.generic_string() << "\n" << e.what() << std::endl;
-	}
-
-	return false;
+	if( mMovie )
+		mFrameTexture = mMovie->getTexture();
 }
 
-void _TBOX_PREFIX_App::stopVideo()
+void _TBOX_PREFIX_App::draw()
 {
-	mMovieDecoder.stop();
-	mAudioRenderer->stop();
+	gl::clear( Color( 0, 0, 0 ) );
+	//gl::enableAlphaBlending();
+	gl::color( Color::white() );
 
-	mVideoClock = 0.0;
-	mAudioClock = 0.0;
+	if( mFrameTexture ) {
+		Rectf centeredRect = Rectf( mFrameTexture.getBounds() ).getCenteredFit( getWindowBounds(), true );
+		gl::draw( mFrameTexture, centeredRect  );
+	}
 
-	mMovieDecoder.destroy();
+	/*if( mInfoTexture ) {
+		glDisable( GL_TEXTURE_RECTANGLE_ARB );
+		gl::draw( mInfoTexture, Vec2f( 20, getWindowHeight() - 20 - mInfoTexture.getHeight() ) );
+	}*/
 }
 
 CINDER_APP_NATIVE( _TBOX_PREFIX_App, RendererGl )

@@ -15,6 +15,7 @@
 	<sourcePattern>include/common/*.h</sourcePattern>
 	<sourcePattern>include/audiorenderer/*.h</sourcePattern>
 	<sourcePattern>include/movierenderer/*.h</sourcePattern>
+	<sourcePattern>src/CinderFFmpeg.cpp</sourcePattern>
 	<sourcePattern>src/common/*.cpp</sourcePattern>
 	<sourcePattern>src/audiorenderer/*.cpp</sourcePattern>
 	<sourcePattern>src/movierenderer/*.cpp</sourcePattern>
