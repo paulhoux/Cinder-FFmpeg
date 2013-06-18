@@ -4,7 +4,7 @@
 	name="FFmpeg"
 	id="nl.cowlumbus.ffmpeg"
 	author="Paul Houx"
-	license="GPL, Commercial"
+	license="MIT"
 	summary="Digital video decoder for Cinder, based on FFmpeg's libavcodec library."
 	url="https://github.com/paulhoux/Cinder-FFmpeg"
 	git="git://github.com/paulhoux/Cinder-FFmpeg.git"
