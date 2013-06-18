@@ -7,6 +7,9 @@ Cinder block for playing video using FFmpeg's Libavcodec and the OpenAL librarie
 Included is the Windows distribution of Libavcodec (the version of November 25th, 2012) and OpenAL 1.1. Please refer to the [FFmpeg website](http://www.ffmpeg.org/) for more information on licensing. As a special warning, it should be noted that FFmpeg is not available under any other licensing terms, especially not proprietary/commercial ones, not even in exchange for payment.
 
 
+**This block is currently undergoing a major rewrite. On the TODO list are: adding MovieSurface and MovieGl classes that mimic Cinder's QuickTime classes, merging the Glover classes into new base classes, supporting the latest libavcodec build and making the block compatible with vc11.**
+
+
 #####Known issues
 * Can't play audio in floating point format, most notably the Microsoft WMV-format. Resampling is required, which is not yet implemented.
 * Can't play files without at least one audio track. Synchronization depends on audio. Will be fixed later.
