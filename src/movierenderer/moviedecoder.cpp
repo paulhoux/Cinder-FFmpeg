@@ -285,8 +285,8 @@ void MovieDecoder::seek(int offset)
     {
         m_AudioClock = (double) timestamp / AV_TIME_BASE;
         m_VideoClock = m_AudioClock;
-        mutex::scoped_lock videoLock(m_VideoQueueMutex);
-        mutex::scoped_lock audioLock(m_AudioQueueMutex);
+        boost::mutex::scoped_lock videoLock(m_VideoQueueMutex);
+        boost::mutex::scoped_lock audioLock(m_AudioQueueMutex);
 
         clearQueue(m_AudioQueue);
         clearQueue(m_VideoQueue);
@@ -376,7 +376,7 @@ void MovieDecoder::createAVFrame(AVFrame** avFrame, int width, int height, Pixel
 bool MovieDecoder::decodeVideoPacket(AVPacket& packet)
 {
     int frameFinished;
-	mutex::scoped_lock lock(m_DecodeVideoMutex);
+	boost::mutex::scoped_lock lock(m_DecodeVideoMutex);
     int bytesDecoded = avcodec_decode_video2(m_pVideoCodecContext, m_pFrame, &frameFinished, &packet);
     av_free_packet(&packet);
     if (bytesDecoded < 0)
@@ -412,14 +412,14 @@ bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
 		
 		if(m_pSwrContext)
 		{
-			mutex::scoped_lock lock(m_DecodeAudioMutex);
+			boost::mutex::scoped_lock lock(m_DecodeAudioMutex);
             bytesDecoded = avcodec_decode_audio3(m_pAudioStream->codec,
 												(::int16_t *)m_pAudioBufferTemp,
                                                 &bufferSize, &packet);
 		}
 		else
         {
-            mutex::scoped_lock lock(m_DecodeAudioMutex);
+            boost::mutex::scoped_lock lock(m_DecodeAudioMutex);
             bytesDecoded = avcodec_decode_audio3(m_pAudioStream->codec,
 												(::int16_t *)m_pAudioBuffer,
                                                 &bufferSize, &packet);
@@ -467,8 +467,8 @@ void MovieDecoder::readPackets()
             (int) m_AudioQueue.size() >= m_MaxAudioQueueSize)
         {
             //std::this_thread::sleep_for(std::chrono::milliseconds(25));
-			xtime xt;
-			xtime_get(&xt, TIME_UTC_);
+			boost::xtime xt;
+			boost::xtime_get(&xt, TIME_UTC_);
 			xt.nsec += 25000000; // 25 msec
 			m_pPacketReaderThread->sleep(xt);
             
@@ -500,7 +500,7 @@ void MovieDecoder::start()
     m_Stop = false;
     if (!m_pPacketReaderThread)
     {
-        m_pPacketReaderThread = new thread(boost::bind(&MovieDecoder::readPackets, this));
+        m_pPacketReaderThread = new boost::thread(boost::bind(&MovieDecoder::readPackets, this));
     }
 }
 
@@ -522,13 +522,13 @@ void MovieDecoder::stop()
 
 bool MovieDecoder::queueVideoPacket(AVPacket* packet)
 {
-    mutex::scoped_lock lock(m_VideoQueueMutex);
+    boost::mutex::scoped_lock lock(m_VideoQueueMutex);
     return queuePacket(m_VideoQueue, packet);
 }
 
 bool MovieDecoder::queueAudioPacket(AVPacket* packet)
 {
-    mutex::scoped_lock lock(m_AudioQueueMutex);
+    boost::mutex::scoped_lock lock(m_AudioQueueMutex);
     return queuePacket(m_AudioQueue, packet);
 }
 
@@ -566,13 +566,13 @@ void MovieDecoder::clearQueue(std::queue<AVPacket>& packetQueue)
 
 bool MovieDecoder::popAudioPacket(AVPacket* packet)
 {
-    mutex::scoped_lock lock(m_AudioQueueMutex);
+    boost::mutex::scoped_lock lock(m_AudioQueueMutex);
     return popPacket(m_AudioQueue, packet);
 }
 
 bool MovieDecoder::popVideoPacket(AVPacket* packet)
 {
-    mutex::scoped_lock lock(m_VideoQueueMutex);
+    boost::mutex::scoped_lock lock(m_VideoQueueMutex);
     return popPacket(m_VideoQueue, packet);
 }
 
