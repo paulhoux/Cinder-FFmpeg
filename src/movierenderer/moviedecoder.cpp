@@ -38,6 +38,7 @@ MovieDecoder::MovieDecoder()
 , m_MaxVideoQueueSize(VIDEO_QUEUESIZE)
 , m_MaxAudioQueueSize(AUDIO_QUEUESIZE)
 , m_pPacketReaderThread(NULL)
+, m_bInitialized(false)
 , m_Stop(false)
 , m_AudioClock(0.0)
 , m_VideoClock(0.0)
@@ -52,6 +53,8 @@ MovieDecoder::~MovieDecoder()
 void MovieDecoder::destroy()
 {
     stop();
+
+	m_bInitialized = false;
 
     if (m_pFrame)
     {
@@ -100,6 +103,7 @@ void MovieDecoder::destroy()
 bool MovieDecoder::initialize(const string& filename)
 {
     bool ok = true;
+	m_bInitialized = false;
 
     av_register_all();
     avcodec_register_all();
@@ -132,9 +136,9 @@ bool MovieDecoder::initialize(const string& filename)
 #endif
 
     ok = ok && initializeVideo();
-    ok = ok && initializeAudio();
+    m_bInitialized = ok && initializeAudio();
 
-    return ok;
+    return m_bInitialized;
 }
 
 bool MovieDecoder::initializeVideo()
@@ -233,27 +237,27 @@ bool MovieDecoder::initializeAudio()
     return true;
 }
 
-int MovieDecoder::getFrameHeight()
+int MovieDecoder::getFrameHeight() const
 {
     return m_pVideoCodecContext ? m_pVideoCodecContext->height : -1;
 }
 
-int MovieDecoder::getFrameWidth()
+int MovieDecoder::getFrameWidth() const
 {
     return m_pVideoCodecContext ? m_pVideoCodecContext->width : -1;
 }
 
-double MovieDecoder::getVideoClock()
+double MovieDecoder::getVideoClock() const
 {
     return m_VideoClock;
 }
 
-double MovieDecoder::getAudioClock()
+double MovieDecoder::getAudioClock() const
 {
     return m_AudioClock;
 }
 
-float MovieDecoder::getProgress()
+float MovieDecoder::getProgress() const
 {
     if (m_pFormatContext)
     {
@@ -263,7 +267,7 @@ float MovieDecoder::getProgress()
     return 0.f;
 }
 
-float MovieDecoder::getDuration()
+float MovieDecoder::getDuration() const
 {
     return static_cast<float>(m_pFormatContext->duration / AV_TIME_BASE);
 }
@@ -576,12 +580,12 @@ bool MovieDecoder::popVideoPacket(AVPacket* packet)
     return popPacket(m_VideoQueue, packet);
 }
 
-double MovieDecoder::getAudioTimeBase()
+double MovieDecoder::getAudioTimeBase() const
 {
     return m_pAudioStream ? av_q2d(m_pAudioStream->time_base) : 0.0;
 }
 
-AudioFormat MovieDecoder::getAudioFormat()
+AudioFormat MovieDecoder::getAudioFormat() const
 {
     AudioFormat format;
 

@@ -54,18 +54,24 @@ public:
     void start();
     void stop();
 
-    int     getFrameWidth();
-    int     getFrameHeight();
-    int     getLineSize(int planeNr);
-    double  getAudioTimeBase();
-    AudioFormat getAudioFormat();
+    int     getFrameWidth() const;
+    int     getFrameHeight() const;
+    int     getLineSize(int planeNr) const;
+    double  getAudioTimeBase() const;
+    AudioFormat getAudioFormat() const;
 
-    double  getVideoClock();
-    double  getAudioClock();
-    float   getProgress();
-    float   getDuration();
+    double  getVideoClock() const;
+    double  getAudioClock() const;
+    float   getProgress() const;
+    float   getDuration() const;
+
+	bool	isInitialized() const { return m_bInitialized; }
 
 private:
+	// copy ops are private to prevent copying 
+    //MovieDecoder(const MovieDecoder&); // no implementation 
+    //MovieDecoder& operator=(const MovieDecoder&); // no implementation 
+
     void readPackets();
     bool queuePacket(std::queue<AVPacket>& packetQueue, AVPacket* packet);
     bool queueVideoPacket(AVPacket* packet);
@@ -108,6 +114,7 @@ private:
     boost::mutex            m_DecodeAudioMutex;
     boost::thread*          m_pPacketReaderThread;
 
+	bool					m_bInitialized;
     bool                    m_Stop;
 
     double                  m_AudioClock;
