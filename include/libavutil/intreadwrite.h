@@ -1,18 +1,18 @@
 /*
- * This file is part of FFmpeg.
+ * This file is part of Libav.
  *
- * FFmpeg is free software; you can redistribute it and/or
+ * Libav is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * FFmpeg is distributed in the hope that it will be useful,
+ * Libav is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with FFmpeg; if not, write to the Free Software
+ * License along with Libav; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
@@ -210,8 +210,7 @@ union unaligned_16 { uint16_t l; } __attribute__((packed)) av_alias;
       ((const uint8_t*)(x))[1])
 #endif
 #ifndef AV_WB16
-#   define AV_WB16(p, darg) do {                \
-        unsigned d = (darg);                    \
+#   define AV_WB16(p, d) do {                   \
         ((uint8_t*)(p))[1] = (d);               \
         ((uint8_t*)(p))[0] = (d)>>8;            \
     } while(0)
@@ -223,8 +222,7 @@ union unaligned_16 { uint16_t l; } __attribute__((packed)) av_alias;
       ((const uint8_t*)(x))[0])
 #endif
 #ifndef AV_WL16
-#   define AV_WL16(p, darg) do {                \
-        unsigned d = (darg);                    \
+#   define AV_WL16(p, d) do {                   \
         ((uint8_t*)(p))[0] = (d);               \
         ((uint8_t*)(p))[1] = (d)>>8;            \
     } while(0)
@@ -238,8 +236,7 @@ union unaligned_16 { uint16_t l; } __attribute__((packed)) av_alias;
                 ((const uint8_t*)(x))[3])
 #endif
 #ifndef AV_WB32
-#   define AV_WB32(p, darg) do {                \
-        unsigned d = (darg);                    \
+#   define AV_WB32(p, d) do {                   \
         ((uint8_t*)(p))[3] = (d);               \
         ((uint8_t*)(p))[2] = (d)>>8;            \
         ((uint8_t*)(p))[1] = (d)>>16;           \
@@ -255,8 +252,7 @@ union unaligned_16 { uint16_t l; } __attribute__((packed)) av_alias;
                 ((const uint8_t*)(x))[0])
 #endif
 #ifndef AV_WL32
-#   define AV_WL32(p, darg) do {                \
-        unsigned d = (darg);                    \
+#   define AV_WL32(p, d) do {                   \
         ((uint8_t*)(p))[0] = (d);               \
         ((uint8_t*)(p))[1] = (d)>>8;            \
         ((uint8_t*)(p))[2] = (d)>>16;           \
@@ -276,8 +272,7 @@ union unaligned_16 { uint16_t l; } __attribute__((packed)) av_alias;
       (uint64_t)((const uint8_t*)(x))[7])
 #endif
 #ifndef AV_WB64
-#   define AV_WB64(p, darg) do {                \
-        uint64_t d = (darg);                    \
+#   define AV_WB64(p, d) do {                   \
         ((uint8_t*)(p))[7] = (d);               \
         ((uint8_t*)(p))[6] = (d)>>8;            \
         ((uint8_t*)(p))[5] = (d)>>16;           \
@@ -301,8 +296,7 @@ union unaligned_16 { uint16_t l; } __attribute__((packed)) av_alias;
       (uint64_t)((const uint8_t*)(x))[0])
 #endif
 #ifndef AV_WL64
-#   define AV_WL64(p, darg) do {                \
-        uint64_t d = (darg);                    \
+#   define AV_WL64(p, d) do {                   \
         ((uint8_t*)(p))[0] = (d);               \
         ((uint8_t*)(p))[1] = (d)>>8;            \
         ((uint8_t*)(p))[2] = (d)>>16;           \

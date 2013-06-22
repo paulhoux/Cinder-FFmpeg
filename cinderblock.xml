@@ -24,21 +24,19 @@
 		<!--staticLibrary>build/lib/msw/avdevice.lib</staticLibrary-->
 		<!--staticLibrary>build/lib/msw/avfilter.lib</staticLibrary-->
 		<staticLibrary>build/lib/msw/avformat.lib</staticLibrary>
+		<staticLibrary>build/lib/msw/avresample.lib</staticLibrary>
 		<staticLibrary>build/lib/msw/avutil.lib</staticLibrary>
-		<!--staticLibrary>build/lib/msw/postproc.lib</staticLibrary-->
-		<staticLibrary>build/lib/msw/swresample.lib</staticLibrary>
-		<staticLibrary>build/lib/msw/swscale.lib</staticLibrary>
 		<staticLibrary>build/lib/msw/openal32.lib</staticLibrary>
+		<staticLibrary>build/lib/msw/swscale.lib</staticLibrary>
 		
-		<buildCopy>build/bin/msw/avcodec-54.dll</buildCopy>
+		<buildCopy>build/bin/msw/avcodec-55.dll</buildCopy>
 		<!--buildCopy>build/bin/msw/avdevice-54.dll</buildCopy-->
 		<!--buildCopy>build/bin/msw/avfilter-3.dll</buildCopy-->
-		<buildCopy>build/bin/msw/avformat-54.dll</buildCopy>
+		<buildCopy>build/bin/msw/avformat-55.dll</buildCopy>
+		<buildCopy>build/bin/msw/avresample-1.dll</buildCopy>
 		<buildCopy>build/bin/msw/avutil-52.dll</buildCopy>
-		<!--buildCopy>build/bin/msw/postproc-52.dll</buildCopy-->
-		<buildCopy>build/bin/msw/swresample-0.dll</buildCopy>
-		<buildCopy>build/bin/msw/swscale-2.dll</buildCopy>
 		<buildCopy>build/bin/msw/openal32.dll</buildCopy>
+		<buildCopy>build/bin/msw/swscale-2.dll</buildCopy>
 	</platform>
 </block>
 <template>templates/Basic FFmpeg/template.xml</template>

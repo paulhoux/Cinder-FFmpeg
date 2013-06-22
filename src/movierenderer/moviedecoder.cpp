@@ -14,8 +14,8 @@ extern "C" {
 
 #include "cinder/App/AppBasic.h"
 
-#define VIDEO_QUEUESIZE 20
-#define AUDIO_QUEUESIZE 50
+#define VIDEO_QUEUESIZE 200
+#define AUDIO_QUEUESIZE 200
 #define VIDEO_FRAMES_BUFFERSIZE 5
 
 using namespace std;
@@ -97,7 +97,10 @@ void MovieDecoder::destroy()
     }
 
 	if( m_pSwrContext ) 
+	{
 		swr_free(&m_pSwrContext);
+		m_pSwrContext = NULL;
+	}
 }
 
 bool MovieDecoder::initialize(const string& filename)
@@ -235,6 +238,9 @@ bool MovieDecoder::initializeAudio()
     {
         throw logic_error("MovieDecoder: Could not open audio codec");
     }
+
+	if(m_pAudioBuffer) delete[] m_pAudioBuffer;
+	if(m_pAudioBufferTemp) delete[] m_pAudioBufferTemp;
 
     m_pAudioBuffer = new ::uint8_t[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
 	m_pAudioBufferTemp = new ::uint8_t[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
@@ -421,10 +427,10 @@ bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
 		
 		if(m_pSwrContext)
 		{
+			int frameFinished = 0;
 			boost::mutex::scoped_lock lock(m_DecodeAudioMutex);
-            bytesDecoded = avcodec_decode_audio3(m_pAudioStream->codec,
-												(::int16_t *)m_pAudioBufferTemp,
-                                                &bufferSize, &packet);
+            bytesDecoded = avcodec_decode_audio4(m_pAudioStream->codec,
+				m_pFrame, &frameFinished, &packet);
 		}
 		else
         {
@@ -449,7 +455,10 @@ bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
 
 		if(m_pSwrContext)
 		{
-			swr_convert(m_pSwrContext, &m_pAudioBuffer, bufferSize, (const uint8_t**) &m_pAudioBufferTemp, bufferSize); 
+			//unsigned char* pointers[SWR_CH_MAX] = {NULL};
+			//pointers[0] = &m_pAudioBuffer[0];
+
+			int numSamplesOut = swr_convert(m_pSwrContext, &m_pAudioBuffer, bufferSize, (const uint8_t**) m_pFrame->extended_data, m_pFrame->nb_samples); 
 		}
 
 		frameDecoded = true;
@@ -605,32 +614,39 @@ AudioFormat MovieDecoder::getAudioFormat() const
     case AV_SAMPLE_FMT_S32:
         format.bits = 32;
         break;
-	/*case AV_SAMPLE_FMT_FLTP:
+	case AV_SAMPLE_FMT_FLTP:
 		format.bits = 16;
 
 		// we have to resample the audio, so let's setup libswresample now
-		m_pSwrContext = swr_alloc_set_opts(m_pSwrContext, 
+		m_pSwrContext = swr_alloc_set_opts(NULL, 
 			m_pAudioCodecContext->channel_layout,
 			AV_SAMPLE_FMT_S16,
 			m_pAudioCodecContext->sample_rate,
 			m_pAudioCodecContext->channel_layout,
-			AV_SAMPLE_FMT_FLTP,
+			m_pAudioCodecContext->sample_fmt,
 			m_pAudioCodecContext->sample_rate,
 			0,
 			NULL);
 
-		swr_init(m_pSwrContext);
+		if( !m_pSwrContext )
+			throw logic_error("MovieDecoder: Failed to create resample context");
 
-		break;*/
+		if( !swr_init(m_pSwrContext) )
+			throw logic_error("MovieDecoder: Failed to initialize resample context");
+
+		break;
     default:
         format.bits = 0;
     }
 
     format.rate             = m_pAudioCodecContext->sample_rate;
     format.numChannels      = m_pAudioCodecContext->channels;
-    format.framesPerPacket  = m_pAudioCodecContext->frame_size;
+    format.framesPerPacket  = m_pAudioCodecContext->frame_size ? m_pAudioCodecContext->frame_size : m_pAudioCodecContext->block_align;
 
-    ci::app::console() << "Audio format: rate (" <<  format.rate << ") numChannels (" << format.numChannels << ")" << endl;
+    ci::app::console() << "Audio format: rate (" <<  format.rate << ")";
+	ci::app::console() << " numChannels (" << format.numChannels << ")";
+	ci::app::console() << " framesPerPacket (" << format.framesPerPacket << ")";
+	ci::app::console() << endl;
 
     return format;
 }

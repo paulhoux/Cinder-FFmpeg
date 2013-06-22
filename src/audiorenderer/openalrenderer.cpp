@@ -14,6 +14,7 @@ using namespace std;
 
 OpenALRenderer::OpenALRenderer()
 : AudioRenderer()
+, m_bInitialized(false)
 , m_pAudioDevice(NULL)
 , m_pAlcContext(NULL)
 , m_AudioSource(0)
@@ -52,6 +53,8 @@ OpenALRenderer::~OpenALRenderer()
 
 void OpenALRenderer::setFormat(const AudioFormat& format)
 {
+	m_bInitialized = false;
+
 	switch (format.bits)
 	{
 	case 8:
@@ -106,12 +109,16 @@ void OpenALRenderer::setFormat(const AudioFormat& format)
 		if(alGetError() != AL_NO_ERROR)
 			throw logic_error("OpenAlRenderer: unsupported format");
 		break;
+
+
 	default:
 		throw logic_error("OpenAlRenderer: unsupported format");
 	}
 
 	m_NumChannels = format.numChannels;
     m_Frequency = format.rate;
+
+	m_bInitialized = true;
 }
 
 bool OpenALRenderer::hasBufferSpace()

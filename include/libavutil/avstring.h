@@ -1,20 +1,20 @@
 /*
  * Copyright (c) 2007 Mans Rullgard
  *
- * This file is part of FFmpeg.
+ * This file is part of Libav.
  *
- * FFmpeg is free software; you can redistribute it and/or
+ * Libav is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * FFmpeg is distributed in the hope that it will be useful,
+ * Libav is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with FFmpeg; if not, write to the Free Software
+ * License along with Libav; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
@@ -131,16 +131,6 @@ size_t av_strlcat(char *dst, const char *src, size_t size);
 size_t av_strlcatf(char *dst, size_t size, const char *fmt, ...) av_printf_format(3, 4);
 
 /**
- * Print arguments following specified format into a large enough auto
- * allocated buffer. It is similar to GNU asprintf().
- * @param fmt printf-compatible format string, specifying how the
- *            following parameters are used.
- * @return the allocated string
- * @note You have to free the string yourself with av_free().
- */
-char *av_asprintf(const char *fmt, ...) av_printf_format(1, 2);
-
-/**
  * Convert a number to a av_malloced string.
  */
 char *av_d2str(double d);
@@ -162,28 +152,19 @@ char *av_d2str(double d);
 char *av_get_token(const char **buf, const char *term);
 
 /**
- * Split the string into several tokens which can be accessed by
- * successive calls to av_strtok().
- *
- * A token is defined as a sequence of characters not belonging to the
- * set specified in delim.
- *
- * On the first call to av_strtok(), s should point to the string to
- * parse, and the value of saveptr is ignored. In subsequent calls, s
- * should be NULL, and saveptr should be unchanged since the previous
- * call.
- *
- * This function is similar to strtok_r() defined in POSIX.1.
- *
- * @param s the string to parse, may be NULL
- * @param delim 0-terminated list of token delimiters, must be non-NULL
- * @param saveptr user-provided pointer which points to stored
- * information necessary for av_strtok() to continue scanning the same
- * string. saveptr is updated to point to the next character after the
- * first delimiter found, or to NULL if the string was terminated
- * @return the found token, or NULL when no token is found
+ * Locale-independent conversion of ASCII isdigit.
  */
-char *av_strtok(char *s, const char *delim, char **saveptr);
+int av_isdigit(int c);
+
+/**
+ * Locale-independent conversion of ASCII isgraph.
+ */
+int av_isgraph(int c);
+
+/**
+ * Locale-independent conversion of ASCII isspace.
+ */
+int av_isspace(int c);
 
 /**
  * Locale-independent conversion of ASCII characters to uppercase.
@@ -206,6 +187,11 @@ static inline int av_tolower(int c)
 }
 
 /**
+ * Locale-independent conversion of ASCII isxdigit.
+ */
+int av_isxdigit(int c);
+
+/*
  * Locale-independent case-insensitive compare.
  * @note This means only ASCII-range characters are case-insensitive
  */

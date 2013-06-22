@@ -31,8 +31,12 @@ public:
     void stop();
     void adjustVolume(float offset);
 
+	bool isInitialized() { return m_bInitialized; }
+
 private:
     bool isPlaying();
+
+	bool				m_bInitialized;
 
     ALCdevice*          m_pAudioDevice;
     ALCcontext*         m_pAlcContext;

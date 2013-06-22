@@ -52,7 +52,7 @@ const gl::Texture MovieGl::getTexture()
 	if( !mMovieDecoder.isInitialized() )
 		return mTexture;
 	
-	// decode audio 
+	// decode audio
 	while( mAudioRenderer->hasBufferSpace() )
 	{
 		AudioFrame audioFrame;

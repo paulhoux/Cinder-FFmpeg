@@ -102,7 +102,7 @@ private:
 	uint8_t*				m_pAudioBufferTemp;
     AVFrame*                m_pFrame;
 
-	SwrContext*				m_pSwrContext;
+	mutable SwrContext*		m_pSwrContext;
 
     int                     m_MaxVideoQueueSize;
     int                     m_MaxAudioQueueSize;

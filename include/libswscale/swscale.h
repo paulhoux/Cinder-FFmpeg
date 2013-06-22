@@ -1,20 +1,20 @@
 /*
- * Copyright (C) 2001-2011 Michael Niedermayer <michaelni@gmx.at>
+ * Copyright (C) 2001-2003 Michael Niedermayer <michaelni@gmx.at>
  *
- * This file is part of FFmpeg.
+ * This file is part of Libav.
  *
- * FFmpeg is free software; you can redistribute it and/or
+ * Libav is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
  * License as published by the Free Software Foundation; either
  * version 2.1 of the License, or (at your option) any later version.
  *
- * FFmpeg is distributed in the hope that it will be useful,
+ * Libav is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
  * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
  * Lesser General Public License for more details.
  *
  * You should have received a copy of the GNU Lesser General Public
- * License along with FFmpeg; if not, write to the Free Software
+ * License along with Libav; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
 
@@ -23,13 +23,8 @@
 
 /**
  * @file
- * @ingroup lsws
- * external API header
- */
-
-/**
- * @defgroup lsws Libswscale
- * @{
+ * @brief
+ *     external api for the swscale stuff
  */
 
 #include <stdint.h>
@@ -82,7 +77,6 @@ const char *swscale_license(void);
 #define SWS_DIRECT_BGR        0x8000
 #define SWS_ACCURATE_RND      0x40000
 #define SWS_BITEXACT          0x80000
-#define SWS_ERROR_DIFFUSION  0x800000
 
 #if FF_API_SWS_CPU_CAPS
 /**
@@ -145,6 +139,13 @@ int sws_isSupportedInput(enum AVPixelFormat pix_fmt);
  * otherwise.
  */
 int sws_isSupportedOutput(enum AVPixelFormat pix_fmt);
+
+/**
+ * @param[in]  pix_fmt the pixel format
+ * @return a positive value if an endianness conversion for pix_fmt is
+ * supported, 0 otherwise.
+ */
+int sws_isSupportedEndiannessConversion(enum AVPixelFormat pix_fmt);
 
 /**
  * Allocate an empty SwsContext. This must be filled and passed to
@@ -221,13 +222,7 @@ int sws_scale(struct SwsContext *c, const uint8_t *const srcSlice[],
               uint8_t *const dst[], const int dstStride[]);
 
 /**
- * @param dstRange flag indicating the while-black range of the output (1=jpeg / 0=mpeg)
- * @param srcRange flag indicating the while-black range of the input (1=jpeg / 0=mpeg)
- * @param table the yuv2rgb coefficients describing the output yuv space, normally ff_yuv2rgb_coeffs[x]
- * @param inv_table the yuv2rgb coefficients describing the input yuv space, normally ff_yuv2rgb_coeffs[x]
- * @param brightness 16.16 fixed point brightness correction
- * @param contrast 16.16 fixed point contrast correction
- * @param saturation 16.16 fixed point saturation correction
+ * @param inv_table the yuv2rgb coefficients, normally ff_yuv2rgb_coeffs[x]
  * @return -1 if not supported
  */
 int sws_setColorspaceDetails(struct SwsContext *c, const int inv_table[4],
@@ -347,9 +342,5 @@ void sws_convertPalette8ToPacked24(const uint8_t *src, uint8_t *dst, int num_pix
  * @see av_opt_find().
  */
 const AVClass *sws_get_class(void);
-
-/**
- * @}
- */
 
 #endif /* SWSCALE_SWSCALE_H */

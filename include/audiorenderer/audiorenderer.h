@@ -22,6 +22,8 @@ public:
     virtual void queueFrame(const AudioFrame& frame) = 0;
 
     virtual double getCurrentPts() = 0;
+
+	virtual bool isInitialized() = 0;
 };
 
 #endif
