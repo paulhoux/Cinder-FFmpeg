@@ -29,14 +29,7 @@
 		<staticLibrary>build/lib/msw/openal32.lib</staticLibrary>
 		<staticLibrary>build/lib/msw/swscale.lib</staticLibrary>
 		
-		<buildCopy>build/bin/msw/avcodec-55.dll</buildCopy>
-		<!--buildCopy>build/bin/msw/avdevice-54.dll</buildCopy-->
-		<!--buildCopy>build/bin/msw/avfilter-3.dll</buildCopy-->
-		<buildCopy>build/bin/msw/avformat-55.dll</buildCopy>
-		<buildCopy>build/bin/msw/avresample-1.dll</buildCopy>
-		<buildCopy>build/bin/msw/avutil-52.dll</buildCopy>
-		<buildCopy>build/bin/msw/openal32.dll</buildCopy>
-		<buildCopy>build/bin/msw/swscale-2.dll</buildCopy>
+		<buildCopy>build/bin/msw/*.dll</buildCopy>
 	</platform>
 </block>
 <template>templates/Basic FFmpeg/template.xml</template>
