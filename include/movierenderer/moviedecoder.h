@@ -28,7 +28,7 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
-#include <libswresample/swresample.h>
+#include <libavresample/avresample.h>
 }
 
 #include <boost/thread/thread.hpp>
@@ -99,10 +99,11 @@ private:
     AVStream*               m_pVideoStream;
     AVStream*               m_pAudioStream;
     uint8_t*                m_pAudioBuffer;
-	uint8_t*				m_pAudioBufferTemp;
+	//uint8_t*				m_pAudioBufferTemp;
     AVFrame*                m_pFrame;
 
-	mutable SwrContext*		m_pSwrContext;
+	//mutable SwrContext*		m_pSwrContext;
+	mutable AVAudioResampleContext*	m_pResampleContext; 
 
     int                     m_MaxVideoQueueSize;
     int                     m_MaxAudioQueueSize;

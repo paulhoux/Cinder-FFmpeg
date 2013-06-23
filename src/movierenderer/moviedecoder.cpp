@@ -10,6 +10,7 @@
 
 extern "C" {
 #include <libswscale/swscale.h>
+#include <libavutil/opt.h>
 }
 
 #include "cinder/App/AppBasic.h"
@@ -17,6 +18,7 @@ extern "C" {
 #define VIDEO_QUEUESIZE 200
 #define AUDIO_QUEUESIZE 200
 #define VIDEO_FRAMES_BUFFERSIZE 5
+#define MAX_AUDIO_FRAME_SIZE 192000
 
 using namespace std;
 using namespace boost;
@@ -32,9 +34,10 @@ MovieDecoder::MovieDecoder()
 , m_pVideoStream(NULL)
 , m_pAudioStream(NULL)
 , m_pAudioBuffer(NULL)
-, m_pAudioBufferTemp(NULL)
+//, m_pAudioBufferTemp(NULL)
 , m_pFrame(NULL)
-, m_pSwrContext(NULL)
+//, m_pSwrContext(NULL)
+, m_pResampleContext(NULL)
 , m_MaxVideoQueueSize(VIDEO_QUEUESIZE)
 , m_MaxAudioQueueSize(AUDIO_QUEUESIZE)
 , m_pPacketReaderThread(NULL)
@@ -84,22 +87,16 @@ void MovieDecoder::destroy()
 #endif
     }
 
-    if (m_pAudioBufferTemp)
-    {
-        delete[] m_pAudioBufferTemp;
-        m_pAudioBufferTemp = NULL;
-    }
-
 	if (m_pAudioBuffer)
     {
-        delete[] m_pAudioBuffer;
+        av_free(m_pAudioBuffer);
         m_pAudioBuffer = NULL;
     }
 
-	if( m_pSwrContext ) 
+	if( m_pResampleContext ) 
 	{
-		swr_free(&m_pSwrContext);
-		m_pSwrContext = NULL;
+		avresample_free(&m_pResampleContext);
+		m_pResampleContext = NULL;
 	}
 }
 
@@ -239,12 +236,9 @@ bool MovieDecoder::initializeAudio()
         throw logic_error("MovieDecoder: Could not open audio codec");
     }
 
-	if(m_pAudioBuffer) delete[] m_pAudioBuffer;
-	if(m_pAudioBufferTemp) delete[] m_pAudioBufferTemp;
-
-    m_pAudioBuffer = new ::uint8_t[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
-	m_pAudioBufferTemp = new ::uint8_t[(AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2];
-
+	if(m_pAudioBuffer) av_free(m_pAudioBuffer);
+    m_pAudioBuffer = (uint8_t*) av_malloc(MAX_AUDIO_FRAME_SIZE);
+	
     return true;
 }
 
@@ -405,68 +399,87 @@ bool MovieDecoder::decodeVideoPacket(AVPacket& packet)
 
 bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
 {
-    AVPacket    packet;
-    int         bytesRemaining;
-    //::uint8_t*  rawData;
-    int         dataSize = (AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2;
     bool        frameDecoded = false;
 
+    AVPacket    packet;
     if (!popAudioPacket(&packet))
     {
         return false;
     }
 
-    bytesRemaining = packet.size;
-    //rawData = packet.data;
-    
-    int bufferSize = (AVCODEC_MAX_AUDIO_FRAME_SIZE * 3) / 2;
-
+    int bytesRemaining = packet.size;
     while(bytesRemaining > 0)
     {
-        int bytesDecoded;
-		
-		if(m_pSwrContext)
+        int bytesDecoded = 0;		
+		int frameFinished = 0;
+
 		{
-			int frameFinished = 0;
 			boost::mutex::scoped_lock lock(m_DecodeAudioMutex);
-            bytesDecoded = avcodec_decode_audio4(m_pAudioStream->codec,
+			bytesDecoded = avcodec_decode_audio4(m_pAudioStream->codec,
 				m_pFrame, &frameFinished, &packet);
 		}
-		else
-        {
-            boost::mutex::scoped_lock lock(m_DecodeAudioMutex);
-            bytesDecoded = avcodec_decode_audio3(m_pAudioStream->codec,
-												(::int16_t *)m_pAudioBuffer,
-                                                &bufferSize, &packet);
-        }
 
         if (bytesDecoded < 0)
         {
-            ci::app::console() << "Error decoding audio frame" << endl;
+			char errbuf[128];
+			av_strerror( bytesDecoded, errbuf, 128 );
+            ci::app::console() << "Error decoding audio frame: " << errbuf << endl;
             break;
         }
-
-        //rawData += bytesDecoded;
-        bytesRemaining -= bytesDecoded;
-        if (dataSize <= 0)
-        {
-            continue;
-        }
-
-		if(m_pSwrContext)
+		else if( bytesDecoded )
 		{
-			//unsigned char* pointers[SWR_CH_MAX] = {NULL};
-			//pointers[0] = &m_pAudioBuffer[0];
+			bytesRemaining -= bytesDecoded;
 
-			int numSamplesOut = swr_convert(m_pSwrContext, &m_pAudioBuffer, bufferSize, (const uint8_t**) m_pFrame->extended_data, m_pFrame->nb_samples); 
+			if(m_pResampleContext)
+			{
+				int audio_bufsize = MAX_AUDIO_FRAME_SIZE + FF_INPUT_BUFFER_PADDING_SIZE;
+				//AVPacket newpkt;
+				//AVFrame *destaudio;
+				//int nb_samples;
+				//av_init_packet(&newpkt);
+				//destaudio = avcodec_alloc_frame();
+				//avcodec_get_frame_defaults(destaudio);
+				//destaudio->extended_data = (uint8_t**) av_malloc(sizeof(uint8_t*));
+                //destaudio->extended_data[0] = (uint8_t*) av_malloc(audio_bufsize);
+                int linesize = m_pFrame->linesize[0];
+
+				int nb_samples = avresample_convert(m_pResampleContext,
+					&m_pAudioBuffer, linesize, audio_bufsize,
+					m_pFrame->extended_data, m_pFrame->linesize[0], m_pFrame->nb_samples);
+
+				if( nb_samples < 0 )
+				{
+					char errbuf[128];
+					av_strerror( nb_samples, errbuf, 128 );
+					ci::app::console() << "Error resampling audio frame: " << errbuf << endl;
+					break;
+				}
+				else
+				{
+					//av_free(m_pFrame->extended_data[0]);
+					//av_free(m_pFrame->extended_data);
+					//m_pFrame->extended_data = destaudio->extended_data;
+					//m_pFrame->extended_data[0] = destaudio->extended_data[0];
+					//m_pFrame->linesize[0] = destaudio->linesize[0];
+				}
+
+				/*int ret = avresample_convert(m_pResampleContext, 
+					&m_pAudioBuffer, 
+					out_plane_size, 
+					out_samples, 
+					m_pFrame->extended_data, 
+					in_plane_size, 
+					in_samples);*/
+			}
+
+			frameDecoded = true;
+			//m_AudioClock = packet.pts * av_q2d(m_pAudioStream->time_base);
+			m_AudioClock = m_pFrame->pkt_pts * av_q2d(m_pAudioStream->time_base);
+
+			frame.setDataSize(m_pFrame->nb_samples);
+			frame.setFrameData(m_pAudioBuffer);
+			frame.setPts(m_AudioClock);
 		}
-
-		frameDecoded = true;
-        m_AudioClock = packet.pts * av_q2d(m_pAudioStream->time_base);
-
-        frame.setDataSize(bufferSize);
-        frame.setFrameData(m_pAudioBuffer);
-        frame.setPts(m_AudioClock);		
     }
 
     av_free_packet(&packet);
@@ -603,6 +616,8 @@ AudioFormat MovieDecoder::getAudioFormat() const
 {
     AudioFormat format;
 
+	int ret = 0;
+
     switch(m_pAudioCodecContext->sample_fmt)
     {
     case AV_SAMPLE_FMT_U8:
@@ -617,7 +632,7 @@ AudioFormat MovieDecoder::getAudioFormat() const
 	case AV_SAMPLE_FMT_FLTP:
 		format.bits = 16;
 
-		// we have to resample the audio, so let's setup libswresample now
+		/*// we have to resample the audio, so let's setup libswresample now
 		m_pSwrContext = swr_alloc_set_opts(NULL, 
 			m_pAudioCodecContext->channel_layout,
 			AV_SAMPLE_FMT_S16,
@@ -632,6 +647,22 @@ AudioFormat MovieDecoder::getAudioFormat() const
 			throw logic_error("MovieDecoder: Failed to create resample context");
 
 		if( !swr_init(m_pSwrContext) )
+			throw logic_error("MovieDecoder: Failed to initialize resample context");*/
+
+		m_pResampleContext = avresample_alloc_context();
+		if(!m_pResampleContext)
+			throw logic_error("MovieDecoder: Failed to create resample context");
+
+		av_opt_set_int(m_pResampleContext, "in_channel_layout",  m_pAudioCodecContext->channel_layout, 0);
+		av_opt_set_int(m_pResampleContext, "in_sample_fmt",      m_pAudioCodecContext->sample_fmt, 0);
+		av_opt_set_int(m_pResampleContext, "in_sample_rate",     m_pAudioCodecContext->sample_rate, 0);
+		av_opt_set_int(m_pResampleContext, "out_channel_layout", m_pAudioCodecContext->channel_layout, 0);
+		av_opt_set_int(m_pResampleContext, "out_sample_fmt",     AV_SAMPLE_FMT_S16, 0);
+		av_opt_set_int(m_pResampleContext, "out_sample_rate",    m_pAudioCodecContext->sample_rate, 0);
+
+		av_opt_set_int(m_pResampleContext, "internal_sample_fmt", AV_SAMPLE_FMT_FLTP, 0);
+
+		if( avresample_open(m_pResampleContext) < 0 )
 			throw logic_error("MovieDecoder: Failed to initialize resample context");
 
 		break;
