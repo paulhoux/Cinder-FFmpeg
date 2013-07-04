@@ -24,13 +24,13 @@ Included is the Windows distribution of Libavcodec (the version of November 25th
 This block is meant to be used with version 0.8.5 of Cinder. See for more information on how to obtain this version:
 http://libcinder.org/download/
 
-Cinder's tool for setting up empty projects, TinderBox, has been revamped and now supports a neat system for the management of plug-ins called Cinder Blocks. This FFmpeg block supports this new feature. To add this block to your copy of Cinder, so it will be detected automatically by TinderBox:
+Cinder's tool for setting up empty projects, TinderBox, has been revamped and now supports a neat system for the management of plug-ins called Cinder Blocks. The FFmpeg block supports this new feature. To add the block to your copy of Cinder, so it will be detected automatically by TinderBox:
 * Open a command window (or Terminal)
 * Switch to the disk containing the Cinder root folder, e.g.: ```d:```
 * Browse to the Cinder root folder: ```cd path\to\cinder_master```
 * Add the Video block to the blocks folder: ```git clone https://github.com/paulhoux/Cinder-FFmpeg.git blocks/FFmpeg```
 
-Alternatively, you can download the repository as a [ZIP-file](https://github.com/paulhoux/Cinder-FFmpeg/zipball/master) and manually add the files to a "cinder_master\blocks\Video" folder.
+Alternatively, you can download the repository as a [ZIP-file](https://github.com/paulhoux/Cinder-FFmpeg/zipball/master) and manually add the files to a "cinder_master\blocks\FFmpeg" folder.
 
 
 #####Creating a sample application using Tinderbox
