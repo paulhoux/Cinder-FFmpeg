@@ -14,6 +14,7 @@ Included is the Windows distribution of Libavcodec (the version of November 25th
 
 
 #####Known issues
+* Playing more than 1 movie at a time, or opening a movie without closing the current one, may cause incorrect behavior.
 * Can't play audio in floating point format, most notably the Microsoft WMV-format. Resampling is required, which is not yet implemented.
 * Can't play files without at least one audio track. Synchronization depends on audio. Will be fixed later.
 * Uploading the video texture to the GPU via DMA is not yet implemented and therefor not yet optimized.
