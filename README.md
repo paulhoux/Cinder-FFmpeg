@@ -14,6 +14,7 @@ Included is the Windows distribution of Libavcodec and OpenAL 1.1. Please refer 
 
 
 #####Known issues
+* To successfully link the application, set "Image Has Safe Exception Handlers" to "No" in Configuration Properties > Linker > All Options.
 * Playing more than 1 movie at a time, or opening a movie without closing the current one, may cause incorrect behavior.
 * Can't play files without at least one audio track. Synchronization depends on audio. Will be fixed later.
 * Uploading the video texture to the GPU via DMA is not yet implemented and therefor not yet optimized.
