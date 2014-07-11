@@ -140,7 +140,7 @@ private:
 
 	//
 	AudioRenderer*		mAudioRenderer;
-	MovieDecoder		mMovieDecoder;
+	MovieDecoder*		mMovieDecoder;
 
 	double				mAudioClock;
 	double				mVideoClock;

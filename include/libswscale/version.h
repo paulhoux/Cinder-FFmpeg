@@ -24,10 +24,10 @@
  * swscale version macros
  */
 
-#include "libavutil/avutil.h"
+#include "libavutil/version.h"
 
 #define LIBSWSCALE_VERSION_MAJOR 2
-#define LIBSWSCALE_VERSION_MINOR 2
+#define LIBSWSCALE_VERSION_MINOR 6
 #define LIBSWSCALE_VERSION_MICRO 100
 
 #define LIBSWSCALE_VERSION_INT  AV_VERSION_INT(LIBSWSCALE_VERSION_MAJOR, \
@@ -54,6 +54,9 @@
 #endif
 #ifndef FF_API_SWS_FORMAT_NAME
 #define FF_API_SWS_FORMAT_NAME  (LIBSWSCALE_VERSION_MAJOR < 3)
+#endif
+#ifndef FF_API_ARCH_BFIN
+#define FF_API_ARCH_BFIN       (LIBSWSCALE_VERSION_MAJOR < 3)
 #endif
 
 #endif /* SWSCALE_VERSION_H */

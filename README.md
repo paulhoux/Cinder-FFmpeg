@@ -1,31 +1,29 @@
 Cinder-FFmpeg
 ================
 
+**This block is EXPERIMENTAL. On the TODO list are: adding MovieSurface and MovieGl classes that mimic Cinder's QuickTime classes, merging the Glover classes into new base classes.**
+
+
 Cinder block for playing video using FFmpeg's Libavcodec and the OpenAL libraries
 
 
 Supports most video formats, including multi-track audio.
 
 
-Included is the Windows distribution of Libavcodec (the version of November 25th, 2012) and OpenAL 1.1. Please refer to the [FFmpeg website](http://www.ffmpeg.org/) for more information on licensing. As a special warning, it should be noted that FFmpeg is not available under any other licensing terms, especially not proprietary/commercial ones, not even in exchange for payment.
-
-
-**This block is EXPERIMENTAL. On the TODO list are: adding MovieSurface and MovieGl classes that mimic Cinder's QuickTime classes, merging the Glover classes into new base classes, supporting the latest libavcodec build and making the block compatible with vc11.**
+Included is the Windows distribution of Libavcodec and OpenAL 1.1. Please refer to the [FFmpeg website](http://www.ffmpeg.org/) for more information on licensing. As a special warning, it should be noted that FFmpeg is not available under any other licensing terms, especially not proprietary/commercial ones, not even in exchange for payment.
 
 
 #####Known issues
 * Playing more than 1 movie at a time, or opening a movie without closing the current one, may cause incorrect behavior.
-* Can't play audio in floating point format, most notably the Microsoft WMV-format. Resampling is required, which is not yet implemented.
 * Can't play files without at least one audio track. Synchronization depends on audio. Will be fixed later.
 * Uploading the video texture to the GPU via DMA is not yet implemented and therefor not yet optimized.
-* This block does not compile on Visual Studio 2012.
 
 
 #####Adding this block to Cinder
-This block is meant to be used with version 0.8.5 of Cinder. See for more information on how to obtain this version:
+This block is meant to be used with the release version (v0.8.5) of Cinder. See for more information on how to obtain this version:
 http://libcinder.org/download/
 
-Cinder's tool for setting up empty projects, TinderBox, has been revamped and now supports a neat system for the management of plug-ins called Cinder Blocks. The FFmpeg block supports this new feature. To add the block to your copy of Cinder, so it will be detected automatically by TinderBox:
+Cinder's tool for setting up empty projects, TinderBox, supports a neat system for the management of plug-ins called Cinder Blocks. The FFmpeg block supports this feature. To add the block to your copy of Cinder, so it will be detected automatically by TinderBox:
 * Open a command window (or Terminal)
 * Switch to the disk containing the Cinder root folder, e.g.: ```d:```
 * Browse to the Cinder root folder: ```cd path\to\cinder_master```
@@ -40,7 +38,7 @@ http://libcinder.org/docs/welcome/TinderBox.html
 
 
 #####Copyright notice and acknowledgements
-Copyright (c) 2010-2013, Paul Houx - All rights reserved. This code is intended for use with the Cinder C++ library: http://libcinder.org
+Copyright (c) 2010-2014, Paul Houx - All rights reserved. This code is intended for use with the Cinder C++ library: http://libcinder.org
 
 Portions of this code: (c) [Dirk van den Boer](https://code.google.com/p/glover/). Portions of this code based on [Zeranoe's FFmpeg build for Windows](http://ffmpeg.zeranoe.com/). 
 

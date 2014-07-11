@@ -21,7 +21,7 @@ extern "C" {
 using namespace std;
 using namespace boost;
 
-MovieDecoder::MovieDecoder()
+MovieDecoder::MovieDecoder(const string& filename)
 : m_VideoStream(-1)
 , m_AudioStream(-1)
 , m_pFormatContext(NULL)
@@ -31,8 +31,6 @@ MovieDecoder::MovieDecoder()
 , m_pAudioCodec(NULL)
 , m_pVideoStream(NULL)
 , m_pAudioStream(NULL)
-, m_pAudioBuffer(NULL)
-, m_pAudioBufferTemp(NULL)
 , m_pFrame(NULL)
 , m_pSwrContext(NULL)
 , m_MaxVideoQueueSize(VIDEO_QUEUESIZE)
@@ -42,66 +40,7 @@ MovieDecoder::MovieDecoder()
 , m_Stop(false)
 , m_AudioClock(0.0)
 , m_VideoClock(0.0)
-{
-}
-
-MovieDecoder::~MovieDecoder()
-{
-	destroy();
-}
-
-void MovieDecoder::destroy()
-{
-	stop();
-
-	m_bInitialized = false;
-
-	if (m_pFrame)
-	{
-		av_free(m_pFrame);
-		m_pFrame = NULL;
-	}
-
-	if (m_pVideoCodecContext)
-	{
-		avcodec_close(m_pVideoCodecContext);
-		m_pVideoCodecContext = NULL;
-	}
-
-	if (m_pAudioCodecContext)
-	{
-		avcodec_close(m_pAudioCodecContext);
-		m_pAudioCodecContext = NULL;
-	}
-
-	if (m_pFormatContext)
-	{
-#if LIBAVCODEC_VERSION_MAJOR < 53
-		av_close_input_file(m_pFormatContext);
-		m_pFormatContext = NULL;
-#else
-		avformat_close_input(&m_pFormatContext);
-#endif
-	}
-
-    if (m_pAudioBufferTemp)
-    {
-        delete[] m_pAudioBufferTemp;
-        m_pAudioBufferTemp = NULL;
-    }
-
-	if (m_pAudioBuffer)
-    {
-        delete[] m_pAudioBuffer;
-        m_pAudioBuffer = NULL;
-    }
-
-	if( m_pSwrContext ) 
-		swr_free(&m_pSwrContext);
-}
-
-bool MovieDecoder::initialize(const string& filename)
-{
+{	
 	bool ok = true;
 	m_bInitialized = false;
 
@@ -142,8 +81,44 @@ bool MovieDecoder::initialize(const string& filename)
 
 	ok = ok && initializeVideo();
 	m_bInitialized = ok && initializeAudio();
+}
 
-	return m_bInitialized;
+MovieDecoder::~MovieDecoder()
+{
+	stop();
+
+	m_bInitialized = false;
+
+	if (m_pFrame)
+	{
+		av_free(m_pFrame);
+		m_pFrame = NULL;
+	}
+
+	if (m_pVideoCodecContext)
+	{
+		avcodec_close(m_pVideoCodecContext);
+		m_pVideoCodecContext = NULL;
+	}
+
+	if (m_pAudioCodecContext)
+	{
+		avcodec_close(m_pAudioCodecContext);
+		m_pAudioCodecContext = NULL;
+	}
+
+	if (m_pFormatContext)
+	{
+#if LIBAVCODEC_VERSION_MAJOR < 53
+		av_close_input_file(m_pFormatContext);
+		m_pFormatContext = NULL;
+#else
+		avformat_close_input(&m_pFormatContext);
+#endif
+	}
+
+	if( m_pSwrContext ) 
+		swr_free(&m_pSwrContext);
 }
 
 bool MovieDecoder::initializeVideo()
@@ -189,7 +164,7 @@ bool MovieDecoder::initializeVideo()
 		throw logic_error("MovieDecoder: Could not open video codec");
 	}
 
-	m_pFrame = avcodec_alloc_frame();
+	m_pFrame = av_frame_alloc();
 
 	return true;
 }
@@ -216,7 +191,7 @@ bool MovieDecoder::initializeAudio()
 	}
 
 	m_pAudioCodecContext = m_pFormatContext->streams[m_AudioStream]->codec;
-	if(m_pAudioCodecContext->channel_layout == 0)
+	if(m_pAudioCodecContext->channel_layout == 0 || m_pAudioCodecContext->channels != av_get_channel_layout_nb_channels(m_pAudioCodecContext->channel_layout))
 		m_pAudioCodecContext->channel_layout = av_get_default_channel_layout( m_pAudioCodecContext->channels );
 	m_pAudioCodec = avcodec_find_decoder(m_pAudioCodecContext->codec_id);
 
@@ -237,9 +212,6 @@ bool MovieDecoder::initializeAudio()
 	{
 		throw logic_error("MovieDecoder: Could not open audio codec");
 	}
-
-    m_pAudioBuffer = new ::uint8_t[AVCODEC_MAX_AUDIO_FRAME_SIZE];
-	m_pAudioBufferTemp = new ::uint8_t[AVCODEC_MAX_AUDIO_FRAME_SIZE];
 
 	return true;
 }
@@ -376,7 +348,7 @@ void MovieDecoder::convertVideoFrame(PixelFormat format)
 
 void MovieDecoder::createAVFrame(AVFrame** avFrame, int width, int height, PixelFormat format)
 {
-	*avFrame = avcodec_alloc_frame();
+	*avFrame = av_frame_alloc();
 
 	int numBytes = avpicture_get_size(format, width, height);
 	uint8_t* pBuffer = new uint8_t[numBytes];
@@ -401,64 +373,107 @@ bool MovieDecoder::decodeVideoPacket(AVPacket& packet)
 
 bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
 {
-	AVPacket    packet;
-
-	int         dataSize;
 	bool        frameDecoded = false;
 
+	AVPacket    packet;
 	if (!popAudioPacket(&packet))
 	{
 		return false;
 	}
 
-	int bytesPerSample = sizeof(uint16_t) * m_pAudioCodecContext->channels;
+	AVFrame* decodedFrame = nullptr;
+
+	int got_frame = 0;
 	int bytesRemaining = packet.size;
 	while(bytesRemaining > 0)
 	{
 		int bytesDecoded;
 		{
-			boost::mutex::scoped_lock lock(m_DecodeAudioMutex);
+			if(!decodedFrame)
+			{
+				if(decodedFrame = av_frame_alloc())
+				{
+					av_frame_unref(decodedFrame);
+				}
+				else
+				{
+					// out of memory
+					break;
+				}
+			}
 
-			dataSize = AVCODEC_MAX_AUDIO_FRAME_SIZE;
-			bytesDecoded = avcodec_decode_audio3(m_pAudioStream->codec,
-												(::int16_t *)m_pAudioBuffer,
-												&dataSize, &packet);
+			boost::mutex::scoped_lock lock(m_DecodeAudioMutex);
+			bytesDecoded = avcodec_decode_audio4(m_pAudioStream->codec, decodedFrame, &got_frame, &packet);
 		}
 
 		if (bytesDecoded < 0)
 		{
+			// error while decoding
 			break;
 		}
 
 		bytesRemaining -= bytesDecoded;
-		if (dataSize <= 0)
+		
+		int dataSize = 0;
+		if(got_frame)
 		{
-			continue;
-		}
+			dataSize = av_samples_get_buffer_size(nullptr, m_pAudioCodecContext->channels, decodedFrame->nb_samples, m_pAudioCodecContext->sample_fmt, 1);
 
-		frame.setPts(packet.pts * av_q2d(m_pAudioStream->time_base));
+			//
+			if (m_pAudioCodecContext->sample_fmt != m_TargetFormat || !m_pSwrContext) {
+				if (m_pSwrContext)
+				{
+					swr_free(&m_pSwrContext);
+					m_pSwrContext = nullptr;
+				}
 
-		if(m_pSwrContext)
-		{
-			int samplesIn = dataSize / bytesPerSample;
-			int samplesOut = swr_convert(m_pSwrContext, &m_pAudioBufferTemp, samplesIn, (const uint8_t**) &m_pAudioBuffer, samplesIn);
+				m_pSwrContext = swr_alloc_set_opts(m_pSwrContext,
+					m_pAudioCodecContext->channel_layout,
+					m_TargetFormat,
+					m_pAudioCodecContext->sample_rate,
+					m_pAudioCodecContext->channel_layout,
+					m_pAudioCodecContext->sample_fmt,
+					m_pAudioCodecContext->sample_rate,
+					0,
+					NULL);
 
-			if(samplesOut > 0)
+				if (!m_pSwrContext)
+				{
+					break;
+				}
+				else if(swr_init(m_pSwrContext) < 0)
+				{
+					break;
+				}
+
+				m_SourceFormat = m_pAudioCodecContext->sample_fmt;
+			}
+
+			if(m_pSwrContext)
 			{
-				frameDecoded = true;
-				frame.setDataSize(samplesOut * bytesPerSample);
-				frame.setFrameData(m_pAudioBufferTemp);
+				const uint8_t** in = (const uint8_t**) decodedFrame->extended_data;
+				uint8_t* out = &m_AudioBuffer[0];
+
+				int bytesPerSample = m_pAudioCodecContext->channels * av_get_bytes_per_sample(m_TargetFormat);
+				int samplesOut = swr_convert(m_pSwrContext, &out, sizeof(m_AudioBuffer) / bytesPerSample, in, decodedFrame->nb_samples);
+
+				dataSize = samplesOut * bytesPerSample;
 			}
 		}
-		else
+
+		if(dataSize > 0)
 		{
 			frameDecoded = true;
 			frame.setDataSize(dataSize);
-			frame.setFrameData(m_pAudioBuffer);
+			frame.setFrameData(m_AudioBuffer);
+			frame.setPts(packet.pts * av_q2d(m_pAudioStream->time_base));
 		}
 	}
 
 	av_free_packet(&packet);
+
+	if(decodedFrame)
+		av_free(decodedFrame);
 
 	return frameDecoded;
 }
@@ -588,40 +603,33 @@ double MovieDecoder::getAudioTimeBase() const
 	return m_pAudioStream ? av_q2d(m_pAudioStream->time_base) : 0.0;
 }
 
-AudioFormat MovieDecoder::getAudioFormat() const
+AudioFormat MovieDecoder::getAudioFormat()
 {
     AudioFormat format;
+	format.floats = false;
 
     switch(m_pAudioCodecContext->sample_fmt)
     {
     case AV_SAMPLE_FMT_U8:
         format.bits = 8;
+		m_TargetFormat = AV_SAMPLE_FMT_U8;
         break;
     case AV_SAMPLE_FMT_S16:
         format.bits = 16;
+		m_TargetFormat = AV_SAMPLE_FMT_S16;
         break;
     case AV_SAMPLE_FMT_S32:
         format.bits = 32;
+		m_TargetFormat = AV_SAMPLE_FMT_S16;
         break;
 	case AV_SAMPLE_FMT_FLTP:
 		format.bits = 16;
-
-		// we have to resample the audio, so let's setup libswresample now
-		m_pSwrContext = swr_alloc_set_opts(m_pSwrContext, 
-			m_pAudioCodecContext->channel_layout,
-			AV_SAMPLE_FMT_S16,
-			m_pAudioCodecContext->sample_rate,
-			m_pAudioCodecContext->channel_layout,
-			AV_SAMPLE_FMT_FLTP,
-			m_pAudioCodecContext->sample_rate,
-			0,
-			NULL);
-
-		swr_init(m_pSwrContext);
-
+		format.floats = true;
+		m_TargetFormat = AV_SAMPLE_FMT_S16;
 		break;
     default:
         format.bits = 0;
+		m_TargetFormat = AV_SAMPLE_FMT_NONE;
     }
 
     format.rate             = m_pAudioCodecContext->sample_rate;

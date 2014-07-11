@@ -38,16 +38,16 @@ extern "C" {
 #include "videoframe.h"
 #include "audiorenderer/audioformat.h"
 
+#define MAX_AUDIO_FRAME_SIZE 192000
+
 class AudioFrame;
 
 class MovieDecoder
 {
 public:
-    MovieDecoder();
+    MovieDecoder(const std::string& filename);
     ~MovieDecoder();
 
-    bool initialize(const std::string& filename);
-    void destroy();
     bool decodeVideoFrame(VideoFrame& videoFrame);
     bool decodeAudioFrame(AudioFrame& audioFrame);
     void seek(int offset);
@@ -58,7 +58,7 @@ public:
     int     getFrameHeight() const;
     int     getLineSize(int planeNr) const;
     double  getAudioTimeBase() const;
-    AudioFormat getAudioFormat() const;
+    AudioFormat getAudioFormat();
 
     double  getVideoClock() const;
     double  getAudioClock() const;
@@ -98,11 +98,12 @@ private:
     AVCodec*                m_pAudioCodec;
     AVStream*               m_pVideoStream;
     AVStream*               m_pAudioStream;
-    uint8_t*                m_pAudioBuffer;
-	uint8_t*				m_pAudioBufferTemp;
+	AVSampleFormat          m_SourceFormat;
+	AVSampleFormat          m_TargetFormat;
+    uint8_t                 m_AudioBuffer[MAX_AUDIO_FRAME_SIZE * 4];
     AVFrame*                m_pFrame;
 
-	mutable SwrContext*		m_pSwrContext;
+	SwrContext*             m_pSwrContext;
 
     int                     m_MaxVideoQueueSize;
     int                     m_MaxAudioQueueSize;

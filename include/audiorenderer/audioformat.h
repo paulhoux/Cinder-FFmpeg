@@ -7,6 +7,7 @@ struct AudioFormat
     unsigned int rate;
     unsigned int numChannels;
     unsigned int framesPerPacket;
+	bool         floats;
 };
 
 #endif

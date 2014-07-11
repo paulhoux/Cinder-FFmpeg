@@ -23,7 +23,8 @@ MovieGl::MovieGl( const fs::path &path ) :
 	app::console() << "Constructor called" << std::endl;
 	//stop();
 
-	if( !mMovieDecoder.initialize( path.generic_string() ) )
+	mMovieDecoder = new MovieDecoder( path.generic_string() );
+	if(!mMovieDecoder->isInitialized())
 		throw std::logic_error("MovieDecoder: Failed to initialize");
 
 	//
@@ -31,7 +32,7 @@ MovieGl::MovieGl( const fs::path &path ) :
 	
 	// initialize OpenAL audio renderer
 	mAudioRenderer = AudioRendererFactory::create(AudioRendererFactory::OPENAL_OUTPUT);
-	mAudioRenderer->setFormat( mMovieDecoder.getAudioFormat() );
+	mAudioRenderer->setFormat( mMovieDecoder->getAudioFormat() );
 }
 
 MovieGl::~MovieGl()
@@ -39,7 +40,11 @@ MovieGl::~MovieGl()
 	app::console() << "Deconstructor called" << std::endl;
 	stop();
 
-	mMovieDecoder.destroy();
+	if(mMovieDecoder)
+	{
+		delete mMovieDecoder;
+		mMovieDecoder = nullptr;
+	}
 
 	if(mAudioRenderer) 
 		delete mAudioRenderer;
@@ -49,14 +54,14 @@ MovieGl::~MovieGl()
 
 const gl::Texture MovieGl::getTexture() 
 {
-	if( !mMovieDecoder.isInitialized() )
+	if( !mMovieDecoder->isInitialized() )
 		return mTexture;
 	
 	// decode audio 
 	while( mAudioRenderer->hasBufferSpace() )
 	{
 		AudioFrame audioFrame;
-		if( mMovieDecoder.decodeAudioFrame(audioFrame) )
+		if( mMovieDecoder->decodeAudioFrame(audioFrame) )
 		{
 			mAudioRenderer->queueFrame(audioFrame);
 		}
@@ -77,7 +82,7 @@ const gl::Texture MovieGl::getTexture()
 	{
 		++count;
 
-		if( mMovieDecoder.decodeVideoFrame(videoFrame) )
+		if( mMovieDecoder->decodeVideoFrame(videoFrame) )
 		{
 			mVideoClock = videoFrame.getPts();
 
@@ -185,16 +190,16 @@ bool MovieGl::checkNewFrame()
 	if( !mAudioRenderer )
 		return false;
 
-	if( ! mMovieDecoder.isInitialized() )
+	if( ! mMovieDecoder->isInitialized() )
 		return false;
 
 	//
-	return ( mMovieDecoder.getVideoClock() < mAudioRenderer->getCurrentPts() );	
+	return ( mMovieDecoder->getVideoClock() < mAudioRenderer->getCurrentPts() );	
 }
 
 float MovieGl::getCurrentTime() const
 {
-	return static_cast<float>( mMovieDecoder.getVideoClock() );
+	return static_cast<float>( mMovieDecoder->getVideoClock() );
 }
 
 bool MovieGl::isPlaying() const
@@ -209,16 +214,16 @@ bool MovieGl::isDone() const
 
 void MovieGl::play()
 {
-	if( mMovieDecoder.isInitialized() ) 
+	if( mMovieDecoder->isInitialized() ) 
 	{
-		mMovieDecoder.start();
+		mMovieDecoder->start();
 
-		mWidth = static_cast<int32_t>( mMovieDecoder.getFrameWidth() );
-		mHeight = static_cast<int32_t>( mMovieDecoder.getFrameHeight() );
-		mDuration = mMovieDecoder.getDuration();
+		mWidth = static_cast<int32_t>( mMovieDecoder->getFrameWidth() );
+		mHeight = static_cast<int32_t>( mMovieDecoder->getFrameHeight() );
+		mDuration = mMovieDecoder->getDuration();
 
-		mVideoClock = mMovieDecoder.getVideoClock();
-		mAudioClock = mMovieDecoder.getAudioClock();
+		mVideoClock = mMovieDecoder->getVideoClock();
+		mAudioClock = mMovieDecoder->getAudioClock();
 	}
 }
 
@@ -227,16 +232,16 @@ void MovieGl::stop()
 	if( ! mAudioRenderer )
 		return;
 
-	if( ! mMovieDecoder.isInitialized() )
+	if( ! mMovieDecoder->isInitialized() )
 		return;
 
-	mMovieDecoder.stop();
+	mMovieDecoder->stop();
 	mAudioRenderer->stop();
 
 	mVideoClock = 0.0;
 	mAudioClock = 0.0;
 
-	//mMovieDecoder.destroy();
+	//mMovieDecoder->destroy();
 }
 
 void MovieGl::initializeShader()
