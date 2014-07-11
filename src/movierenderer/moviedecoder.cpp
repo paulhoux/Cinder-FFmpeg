@@ -22,24 +22,24 @@ using namespace std;
 using namespace boost;
 
 MovieDecoder::MovieDecoder(const string& filename)
-: m_VideoStream(-1)
-, m_AudioStream(-1)
-, m_pFormatContext(NULL)
-, m_pVideoCodecContext(NULL)
-, m_pAudioCodecContext(NULL)
-, m_pVideoCodec(NULL)
-, m_pAudioCodec(NULL)
-, m_pVideoStream(NULL)
-, m_pAudioStream(NULL)
-, m_pFrame(NULL)
-, m_pSwrContext(NULL)
-, m_MaxVideoQueueSize(VIDEO_QUEUESIZE)
-, m_MaxAudioQueueSize(AUDIO_QUEUESIZE)
-, m_pPacketReaderThread(NULL)
-, m_bInitialized(false)
-, m_Stop(false)
-, m_AudioClock(0.0)
-, m_VideoClock(0.0)
+	: m_VideoStream(-1)
+	, m_AudioStream(-1)
+	, m_pFormatContext(NULL)
+	, m_pVideoCodecContext(NULL)
+	, m_pAudioCodecContext(NULL)
+	, m_pVideoCodec(NULL)
+	, m_pAudioCodec(NULL)
+	, m_pVideoStream(NULL)
+	, m_pAudioStream(NULL)
+	, m_pFrame(NULL)
+	, m_pSwrContext(NULL)
+	, m_MaxVideoQueueSize(VIDEO_QUEUESIZE)
+	, m_MaxAudioQueueSize(AUDIO_QUEUESIZE)
+	, m_pPacketReaderThread(NULL)
+	, m_bInitialized(false)
+	, m_Stop(false)
+	, m_AudioClock(0.0)
+	, m_VideoClock(0.0)
 {	
 	bool ok = true;
 	m_bInitialized = false;
@@ -51,7 +51,7 @@ MovieDecoder::MovieDecoder(const string& filename)
 		av_register_all();
 		avcodec_register_all();
 	}
-    
+
 #if LIBAVCODEC_VERSION_MAJOR < 53
 	if (av_open_input_file(&m_pFormatContext, filename.c_str(), NULL, 0, NULL) != 0)
 #else
@@ -300,9 +300,9 @@ bool MovieDecoder::decodeVideoFrame(VideoFrame& frame)
 	if (m_pFrame->interlaced_frame)
 	{
 		avpicture_deinterlace((AVPicture*) m_pFrame, (AVPicture*) m_pFrame,
-								m_pVideoCodecContext->pix_fmt,
-								m_pVideoCodecContext->width,
-								m_pVideoCodecContext->height);
+			m_pVideoCodecContext->pix_fmt,
+			m_pVideoCodecContext->width,
+			m_pVideoCodecContext->height);
 	}
 
 	try {
@@ -329,8 +329,8 @@ bool MovieDecoder::decodeVideoFrame(VideoFrame& frame)
 void MovieDecoder::convertVideoFrame(PixelFormat format)
 {
 	SwsContext* scaleContext = sws_getContext(m_pVideoCodecContext->width, m_pVideoCodecContext->height,
-												m_pVideoCodecContext->pix_fmt, m_pVideoCodecContext->width, m_pVideoCodecContext->height,
-												format, 0, NULL, NULL, NULL);
+		m_pVideoCodecContext->pix_fmt, m_pVideoCodecContext->width, m_pVideoCodecContext->height,
+		format, 0, NULL, NULL, NULL);
 
 	if (NULL == scaleContext)
 		throw logic_error("MovieDecoder: Failed to create resize context");
@@ -339,7 +339,7 @@ void MovieDecoder::convertVideoFrame(PixelFormat format)
 	createAVFrame(&convertedFrame, m_pVideoCodecContext->width, m_pVideoCodecContext->height, format);
 
 	sws_scale(scaleContext, m_pFrame->data, m_pFrame->linesize, 0, m_pVideoCodecContext->height,
-				convertedFrame->data, convertedFrame->linesize);
+		convertedFrame->data, convertedFrame->linesize);
 	sws_freeContext(scaleContext);
 
 	av_free(m_pFrame);
@@ -413,7 +413,7 @@ bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
 		}
 
 		bytesRemaining -= bytesDecoded;
-		
+
 		int dataSize = 0;
 		if(got_frame)
 		{
@@ -493,7 +493,7 @@ void MovieDecoder::readPackets()
 			boost::xtime_get(&xt, TIME_UTC_);
 			xt.nsec += 25000000; // 25 msec
 			m_pPacketReaderThread->sleep(xt);
-            
+
 		}
 		else if (av_read_frame(m_pFormatContext, &packet) >= 0)
 		{
@@ -605,39 +605,43 @@ double MovieDecoder::getAudioTimeBase() const
 
 AudioFormat MovieDecoder::getAudioFormat()
 {
-    AudioFormat format;
+	AudioFormat format;
 	format.floats = false;
 
-    switch(m_pAudioCodecContext->sample_fmt)
-    {
-    case AV_SAMPLE_FMT_U8:
-        format.bits = 8;
+	switch(m_pAudioCodecContext->sample_fmt)
+	{
+	case AV_SAMPLE_FMT_U8:
+	case AV_SAMPLE_FMT_U8P:
+		format.bits = 8;
 		m_TargetFormat = AV_SAMPLE_FMT_U8;
-        break;
-    case AV_SAMPLE_FMT_S16:
-        format.bits = 16;
+		break;
+	case AV_SAMPLE_FMT_S16:
+	case AV_SAMPLE_FMT_S16P:
+		format.bits = 16;
 		m_TargetFormat = AV_SAMPLE_FMT_S16;
-        break;
-    case AV_SAMPLE_FMT_S32:
-        format.bits = 32;
+		break;
+	case AV_SAMPLE_FMT_S32:
+	case AV_SAMPLE_FMT_S32P:
+		format.bits = 32;
 		m_TargetFormat = AV_SAMPLE_FMT_S16;
-        break;
+		break;
 	case AV_SAMPLE_FMT_FLTP:
 		format.bits = 16;
 		format.floats = true;
 		m_TargetFormat = AV_SAMPLE_FMT_S16;
 		break;
-    default:
-        format.bits = 0;
-		m_TargetFormat = AV_SAMPLE_FMT_NONE;
-    }
+	default:
+		// try to resample the audio to 16-but signed integers
+		format.bits = 16;
+		m_TargetFormat = AV_SAMPLE_FMT_S16;
+	}
 
-    format.rate             = m_pAudioCodecContext->sample_rate;
-    format.numChannels      = m_pAudioCodecContext->channels;
-    format.framesPerPacket  = m_pAudioCodecContext->frame_size;
+	format.rate             = m_pAudioCodecContext->sample_rate;
+	format.numChannels      = m_pAudioCodecContext->channels;
+	format.framesPerPacket  = m_pAudioCodecContext->frame_size;
 
-    ci::app::console() << "Audio format: bits (" << format.bits << ") rate (" <<  format.rate << ") numChannels (" << format.numChannels << ")" << endl;
+	ci::app::console() << "Audio format: bits (" << format.bits << ") rate (" <<  format.rate << ") numChannels (" << format.numChannels << ")" << endl;
 
-    return format;
+	return format;
 }
 
