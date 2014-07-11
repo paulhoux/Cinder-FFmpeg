@@ -114,6 +114,13 @@ void OpenALRenderer::setFormat(const AudioFormat& format)
     m_Frequency = format.rate;
 }
 
+bool OpenALRenderer::hasQueuedFrames()
+{
+	int queued = 0;
+    alGetSourcei(m_AudioSource, AL_BUFFERS_QUEUED, &queued);
+    return queued > 0;
+}
+
 bool OpenALRenderer::hasBufferSpace()
 {
     int queued = 0;
@@ -210,6 +217,9 @@ void OpenALRenderer::adjustVolume(float offset)
 
 double OpenALRenderer::getCurrentPts()
 {
-    return m_PtsQueue.empty() ? 0 : m_PtsQueue.front();
+	float offsetInSeconds = 0.f;
+	alGetSourcef( m_AudioSource, AL_SEC_OFFSET, &offsetInSeconds );
+
+    return m_PtsQueue.empty() ? 0 : m_PtsQueue.front() + double(offsetInSeconds);
 }
 

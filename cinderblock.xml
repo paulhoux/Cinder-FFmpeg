@@ -9,7 +9,7 @@
 	url="https://github.com/paulhoux/Cinder-FFmpeg"
 	git="git://github.com/paulhoux/Cinder-FFmpeg.git"
 	>
-	<supports os="msw" compiler="vc10" />
+	<supports os="msw" />
 	<includePath>include</includePath>
 	<header>include/CinderFFmpeg.h</header>
 	<sourcePattern>include/common/*.h</sourcePattern>

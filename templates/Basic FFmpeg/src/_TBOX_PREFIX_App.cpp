@@ -1,5 +1,4 @@
 #include "cinder/app/AppNative.h"
-#include "cinder/audio/Output.h"
 #include "cinder/gl/gl.h"
 #include "cinder/gl/Fbo.h"
 #include "cinder/gl/GlslProg.h"

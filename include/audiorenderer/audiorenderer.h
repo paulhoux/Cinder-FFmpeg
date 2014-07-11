@@ -17,6 +17,7 @@ public:
     virtual void stop() = 0;
     virtual void adjustVolume(float offset) = 0;
 
+	virtual bool hasQueuedFrames() = 0;
     virtual bool hasBufferSpace() = 0;
     virtual void flushBuffers() = 0;
     virtual void queueFrame(const AudioFrame& frame) = 0;

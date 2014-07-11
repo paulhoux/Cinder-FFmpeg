@@ -69,8 +69,8 @@ public:
 
 private:
 	// copy ops are private to prevent copying 
-    //MovieDecoder(const MovieDecoder&); // no implementation 
-    //MovieDecoder& operator=(const MovieDecoder&); // no implementation 
+    MovieDecoder(const MovieDecoder&); // no implementation 
+    MovieDecoder& operator=(const MovieDecoder&); // no implementation 
 
     void readPackets();
     bool queuePacket(std::queue<AVPacket>& packetQueue, AVPacket* packet);
@@ -102,7 +102,7 @@ private:
 	uint8_t*				m_pAudioBufferTemp;
     AVFrame*                m_pFrame;
 
-	SwrContext*				m_pSwrContext;
+	mutable SwrContext*		m_pSwrContext;
 
     int                     m_MaxVideoQueueSize;
     int                     m_MaxAudioQueueSize;

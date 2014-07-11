@@ -20,6 +20,7 @@ public:
     virtual ~OpenALRenderer();
 
     void setFormat(const AudioFormat& format);
+	bool hasQueuedFrames();
     bool hasBufferSpace();
     void queueFrame(const AudioFrame& frame);
     void clearBuffers();
