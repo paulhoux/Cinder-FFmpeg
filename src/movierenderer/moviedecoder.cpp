@@ -21,6 +21,17 @@ extern "C" {
 using namespace std;
 using namespace boost;
 
+void MovieDecoder::startFFmpeg()
+{
+	static bool libavcodec_initialized = false;
+	if( ! libavcodec_initialized )
+	{
+		libavcodec_initialized = true;
+		av_register_all();
+		avcodec_register_all();
+	}
+}
+
 MovieDecoder::MovieDecoder(const string& filename)
 	: m_VideoStream(-1)
 	, m_AudioStream(-1)
@@ -37,20 +48,21 @@ MovieDecoder::MovieDecoder(const string& filename)
 	, m_MaxAudioQueueSize(AUDIO_QUEUESIZE)
 	, m_pPacketReaderThread(NULL)
 	, m_bInitialized(false)
-	, m_Stop(false)
+	, m_bPlaying(false)
+	, m_bSingleFrame(false)
+	, m_bSeeking(false)
+	, m_bDone(false)
 	, m_AudioClock(0.0)
 	, m_VideoClock(0.0)
 {	
 	bool ok = true;
 	m_bInitialized = false;
 
-	static bool libavcodec_initialized = false;
-	if( ! libavcodec_initialized )
-	{
-		libavcodec_initialized = true;
-		av_register_all();
-		avcodec_register_all();
-	}
+	startFFmpeg();
+
+	av_init_packet(&m_FlushPacket);
+	m_FlushPacket.data = (uint8_t*) "FLUSH";
+	m_FlushPacket.size = strlen((const char*)m_FlushPacket.data);
 
 #if LIBAVCODEC_VERSION_MAJOR < 53
 	if (av_open_input_file(&m_pFormatContext, filename.c_str(), NULL, 0, NULL) != 0)
@@ -75,8 +87,8 @@ MovieDecoder::MovieDecoder(const string& filename)
 	}
 
 #ifdef _DEBUG
-	//dump_format(m_pFormatContext, 0, filename.c_str(), false);
 	av_log_set_level(AV_LOG_DEBUG);
+	//av_dump_format(m_pFormatContext, 0, filename.c_str(), false);
 #endif
 
 	ok = ok && initializeVideo();
@@ -251,36 +263,21 @@ float MovieDecoder::getDuration() const
 	return static_cast<float>(m_pFormatContext->duration / AV_TIME_BASE);
 }
 
-void MovieDecoder::seek(int offset)
+void MovieDecoder::seek(double seconds)
 {
-	::int64_t timestamp = (::int64_t)((m_AudioClock * AV_TIME_BASE) + (AV_TIME_BASE * offset));
-	int flags = offset < 0 ? AVSEEK_FLAG_BACKWARD : 0;
+	m_SeekTimestamp = (::int64_t)(AV_TIME_BASE * seconds);
+	m_SeekFlags = (seconds < m_AudioClock) ? AVSEEK_FLAG_BACKWARD : 0;
 
-	if (timestamp < 0)
-	{
-		timestamp = 0;
-	}
+	if (m_SeekTimestamp < 0)
+		m_SeekTimestamp = 0;
+	else if (m_SeekTimestamp > m_pFormatContext->duration)
+		m_SeekTimestamp = m_pFormatContext->duration;
 
-	ci::app::console() << "av_gettime: " << timestamp << " timebase " << AV_TIME_BASE << " " << flags << endl;
-	int ret = av_seek_frame(m_pFormatContext, -1, timestamp, flags);
+	m_AudioClock = (double) m_SeekTimestamp / AV_TIME_BASE;
+	m_VideoClock = m_AudioClock;
 
-	if (ret >= 0)
-	{
-		m_AudioClock = (double) timestamp / AV_TIME_BASE;
-		m_VideoClock = m_AudioClock;
-		boost::mutex::scoped_lock videoLock(m_VideoQueueMutex);
-		boost::mutex::scoped_lock audioLock(m_AudioQueueMutex);
-
-		clearQueue(m_AudioQueue);
-		clearQueue(m_VideoQueue);
-
-		avcodec_flush_buffers(m_pFormatContext->streams[m_VideoStream]->codec);
-		avcodec_flush_buffers(m_pFormatContext->streams[m_AudioStream]->codec);
-	}
-	else
-	{
-		ci::app::console() << "Error seeking to position: " << timestamp << endl;
-	}
+	m_bSingleFrame = !m_bPlaying;
+	m_bSeeking = true;
 }
 
 bool MovieDecoder::decodeVideoFrame(VideoFrame& frame)
@@ -291,11 +288,23 @@ bool MovieDecoder::decodeVideoFrame(VideoFrame& frame)
 	do
 	{
 		if (!popVideoPacket(&packet))
-		{
 			return false;
+
+		// handle flush packets
+		if(packet.data == m_FlushPacket.data)
+		{
+			avcodec_flush_buffers(m_pFormatContext->streams[m_VideoStream]->codec);
+			continue;
 		}
+
 		frameDecoded = decodeVideoPacket(packet);
 	} while (!frameDecoded);
+
+	if(m_bSingleFrame)
+	{
+		m_bSingleFrame = false;
+		m_bPlaying = false;
+	}
 
 	if (m_pFrame->interlaced_frame)
 	{
@@ -377,7 +386,12 @@ bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
 
 	AVPacket    packet;
 	if (!popAudioPacket(&packet))
+		return false;
+
+	// handle flush packets
+	if(packet.data == m_FlushPacket.data)
 	{
+		avcodec_flush_buffers(m_pFormatContext->streams[m_AudioStream]->codec);
 		return false;
 	}
 
@@ -481,21 +495,42 @@ bool MovieDecoder::decodeAudioFrame(AudioFrame& frame)
 void MovieDecoder::readPackets()
 {
 	AVPacket    packet;
-	bool        framesAvailable = true;
 
-	while(framesAvailable && !m_Stop)
+	while(!m_bDone)
 	{
-		if ((int) m_VideoQueue.size() >= m_MaxVideoQueueSize ||
+		if(m_bSeeking)
+		{
+			m_bSeeking = false;
+			m_bPlaying = true;
+			
+			int ret = av_seek_frame(m_pFormatContext, -1, m_SeekTimestamp, m_SeekFlags);
+
+			if (ret >= 0)
+			{
+				{
+					boost::mutex::scoped_lock audioLock(m_AudioQueueMutex);
+					boost::mutex::scoped_lock videoLock(m_VideoQueueMutex);
+
+					clearQueue(m_AudioQueue);
+					clearQueue(m_VideoQueue);
+				}
+			
+				if(m_AudioStream >= 0)
+					queueAudioPacket(&m_FlushPacket);
+			
+				if(m_VideoStream >= 0)
+					queueVideoPacket(&m_FlushPacket);
+			}
+		}
+		else if ((int) m_VideoQueue.size() >= m_MaxVideoQueueSize ||
 			(int) m_AudioQueue.size() >= m_MaxAudioQueueSize)
 		{
-			//std::this_thread::sleep_for(std::chrono::milliseconds(25));
 			boost::xtime xt;
 			boost::xtime_get(&xt, TIME_UTC_);
 			xt.nsec += 25000000; // 25 msec
 			m_pPacketReaderThread->sleep(xt);
-
 		}
-		else if (av_read_frame(m_pFormatContext, &packet) >= 0)
+		else if (m_bPlaying && av_read_frame(m_pFormatContext, &packet) >= 0)
 		{
 			if (packet.stream_index == m_VideoStream)
 			{
@@ -512,14 +547,17 @@ void MovieDecoder::readPackets()
 		}
 		else
 		{
-			framesAvailable = false;
+			m_bPlaying = false;
 		}
 	}
 }
 
 void MovieDecoder::start()
 {
-	m_Stop = false;
+	stop();
+
+	m_bPlaying = true;
+	m_bDone = false;
 	if (!m_pPacketReaderThread)
 	{
 		m_pPacketReaderThread = new boost::thread(boost::bind(&MovieDecoder::readPackets, this));
@@ -530,7 +568,7 @@ void MovieDecoder::stop()
 {
 	m_VideoClock = 0;
 	m_AudioClock = 0;
-	m_Stop = true;
+	m_bDone = true;
 	if (m_pPacketReaderThread)
 	{
 		m_pPacketReaderThread->join();

@@ -12,10 +12,12 @@
 
 using namespace std;
 
+ALCdevice* OpenALRenderer::m_pAudioDevice = nullptr;
+ALCcontext* OpenALRenderer::m_pAlcContext = nullptr;
+int OpenALRenderer::m_RefCount = 0;
+
 OpenALRenderer::OpenALRenderer()
 : AudioRenderer()
-, m_pAudioDevice(NULL)
-, m_pAlcContext(NULL)
 , m_AudioSource(0)
 , m_CurrentBuffer(0)
 , m_Volume(1.f)
@@ -23,13 +25,16 @@ OpenALRenderer::OpenALRenderer()
 , m_NumChannels(0)
 , m_Frequency(0)
 {
-    m_pAudioDevice = alcOpenDevice(NULL);
+	if(!m_pAudioDevice)
+		m_pAudioDevice = alcOpenDevice(NULL);
 
-    if (m_pAudioDevice)
-    {
-        m_pAlcContext = alcCreateContext(m_pAudioDevice, NULL);
-        alcMakeContextCurrent(m_pAlcContext);
-    }
+	if (m_pAudioDevice && !m_pAlcContext)
+	{
+		m_pAlcContext = alcCreateContext(m_pAudioDevice, NULL);
+		alcMakeContextCurrent(m_pAlcContext);
+	}
+
+	m_RefCount++;
 
     assert(alGetError() == AL_NO_ERROR);
     alGenBuffers(NUM_BUFFERS, m_AudioBuffers);
@@ -42,12 +47,21 @@ OpenALRenderer::~OpenALRenderer()
     alDeleteSources(1, &m_AudioSource);
     alDeleteBuffers(NUM_BUFFERS, m_AudioBuffers);
 
-    if (m_pAudioDevice)
-    {
-        alcMakeContextCurrent(NULL);
-        alcDestroyContext(m_pAlcContext);
-        alcCloseDevice(m_pAudioDevice);
-    }
+	if(--m_RefCount <= 0)
+	{
+		if (m_pAlcContext)
+		{
+			alcMakeContextCurrent(NULL);
+			alcDestroyContext(m_pAlcContext);
+			m_pAlcContext = nullptr;
+		}
+
+		if(m_pAudioDevice)
+		{
+			alcCloseDevice(m_pAudioDevice);
+			m_pAudioDevice = nullptr;
+		}
+	}
 }
 
 void OpenALRenderer::setFormat(const AudioFormat& format)

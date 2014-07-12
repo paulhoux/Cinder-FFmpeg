@@ -123,6 +123,8 @@ public:
 	void	play();
 	//! Stops movie playback.
 	void	stop();
+	//! 
+	void	seek(double seconds);
 
 	//! Sets a function which is called whenever the movie has rendered a new frame during playback. Generally only necessary for advanced users.
 	void	setNewFrameCallback( void(*aNewFrameCallback)( long, void * ), void *aNewFrameCallbackRefcon );

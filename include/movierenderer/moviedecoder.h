@@ -50,7 +50,7 @@ public:
 
     bool decodeVideoFrame(VideoFrame& videoFrame);
     bool decodeAudioFrame(AudioFrame& audioFrame);
-    void seek(int offset);
+    void seek(double seconds);
     void start();
     void stop();
 
@@ -66,6 +66,8 @@ public:
     float   getDuration() const;
 
 	bool	isInitialized() const { return m_bInitialized; }
+	bool	isPlaying() const { return m_bPlaying; }
+	bool	isDone() const { return m_bDone; }
 
 private:
 	// copy ops are private to prevent copying 
@@ -88,6 +90,9 @@ private:
     bool decodeVideoPacket(AVPacket& packet);
     void convertVideoFrame(PixelFormat target);
 
+	//! Initializes FFmpeg
+	static void startFFmpeg();
+
 private:
     int                     m_VideoStream;
     int                     m_AudioStream;
@@ -102,6 +107,7 @@ private:
 	AVSampleFormat          m_TargetFormat;
     uint8_t                 m_AudioBuffer[MAX_AUDIO_FRAME_SIZE * 4];
     AVFrame*                m_pFrame;
+	AVPacket                m_FlushPacket;
 
 	SwrContext*             m_pSwrContext;
 
@@ -115,8 +121,14 @@ private:
     boost::mutex            m_DecodeAudioMutex;
     boost::thread*          m_pPacketReaderThread;
 
-	bool					m_bInitialized;
-    bool                    m_Stop;
+    bool                    m_bInitialized;
+    bool                    m_bPlaying;
+    bool                    m_bSingleFrame;
+    bool                    m_bDone;
+
+    bool                    m_bSeeking;
+    int                     m_SeekFlags;
+    int64_t                 m_SeekTimestamp;
 
     double                  m_AudioClock;
     double                  m_VideoClock;

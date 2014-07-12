@@ -35,8 +35,10 @@ public:
 private:
     bool isPlaying();
 
-    ALCdevice*          m_pAudioDevice;
-    ALCcontext*         m_pAlcContext;
+    static ALCdevice*   m_pAudioDevice;
+    static ALCcontext*  m_pAlcContext;
+	static int          m_RefCount;
+
     ALuint              m_AudioSource;
     ALuint              m_AudioBuffers[NUM_BUFFERS];
     int                 m_CurrentBuffer;

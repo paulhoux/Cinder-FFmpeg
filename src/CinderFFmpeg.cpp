@@ -8,18 +8,23 @@ namespace ph { namespace ffmpeg {
 	MovieGl::MovieGl( const fs::path &path ) :
 		mWidth(0),
 		mHeight(0),
-		mDuration(0.0f)
+		mDuration(0.0f),
+		mAudioRenderer(nullptr),
+		mMovieDecoder(nullptr)
 	{
 		mMovieDecoder = new MovieDecoder( path.generic_string() );
 		if(!mMovieDecoder->isInitialized())
 			throw std::logic_error("MovieDecoder: Failed to initialize");
 
+		// initialize OpenAL audio renderer
+		if(!mAudioRenderer)
+		{
+			mAudioRenderer = AudioRendererFactory::create(AudioRendererFactory::OPENAL_OUTPUT);
+			mAudioRenderer->setFormat( mMovieDecoder->getAudioFormat() );
+		}
+
 		//
 		initializeShader();
-
-		// initialize OpenAL audio renderer
-		mAudioRenderer = AudioRendererFactory::create(AudioRendererFactory::OPENAL_OUTPUT);
-		mAudioRenderer->setFormat( mMovieDecoder->getAudioFormat() );
 	}
 
 	MovieGl::~MovieGl()
@@ -180,12 +185,12 @@ namespace ph { namespace ffmpeg {
 
 	bool MovieGl::isPlaying() const
 	{
-		return true; // TODO
+		return mMovieDecoder->isPlaying();
 	}
 
 	bool MovieGl::isDone() const
 	{
-		return false; // TODO
+		return mMovieDecoder->isDone();
 	}
 
 	void MovieGl::play()
@@ -216,8 +221,19 @@ namespace ph { namespace ffmpeg {
 
 		mVideoClock = 0.0;
 		mAudioClock = 0.0;
+	}
 
-		//mMovieDecoder->destroy();
+	void MovieGl::seek(double seconds)
+	{
+		if( mMovieDecoder->isInitialized() )
+		{
+			mAudioRenderer->clearBuffers();
+			mMovieDecoder->seek(seconds);
+			mAudioRenderer->play();
+
+			mVideoClock = mMovieDecoder->getVideoClock();
+			mAudioClock = mMovieDecoder->getAudioClock();
+		}
 	}
 
 	void MovieGl::initializeShader()
