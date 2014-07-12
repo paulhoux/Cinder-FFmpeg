@@ -9,6 +9,7 @@ namespace ph { namespace ffmpeg {
 		mWidth(0),
 		mHeight(0),
 		mDuration(0.0f),
+		mVideoClock(0.0),
 		mAudioRenderer(nullptr),
 		mMovieDecoder(nullptr)
 	{
@@ -58,14 +59,13 @@ namespace ph { namespace ffmpeg {
 
 		// 
 		mAudioRenderer->flushBuffers();
-		mAudioClock = mAudioRenderer->getCurrentPts();
 
 		// decode video
 		bool hasVideo = false;
 		int count = 0;
 
 		VideoFrame videoFrame;
-		while( mVideoClock < mAudioClock && count++ < 10 )
+		while( mVideoClock < mAudioRenderer->getCurrentPts() && count++ < 10 )
 		{
 			if( mMovieDecoder->decodeVideoFrame(videoFrame) )
 			{
@@ -183,6 +183,16 @@ namespace ph { namespace ffmpeg {
 		return static_cast<float>( mMovieDecoder->getVideoClock() );
 	}
 
+	float MovieGl::getFramerate() const
+	{
+		return static_cast<float>( mMovieDecoder->getFramesPerSecond() );
+	}
+
+	uint64_t MovieGl::getNumFrames() const
+	{
+		return mMovieDecoder->getNumberOfFrames();
+	}
+
 	bool MovieGl::isPlaying() const
 	{
 		return mMovieDecoder->isPlaying();
@@ -195,17 +205,14 @@ namespace ph { namespace ffmpeg {
 
 	void MovieGl::play()
 	{
-		if( mMovieDecoder->isInitialized() ) 
-		{
-			mMovieDecoder->start();
+		if( ! mMovieDecoder->isInitialized() )
+			return;
 
-			mWidth = static_cast<int32_t>( mMovieDecoder->getFrameWidth() );
-			mHeight = static_cast<int32_t>( mMovieDecoder->getFrameHeight() );
-			mDuration = mMovieDecoder->getDuration();
+		mMovieDecoder->start();
 
-			mVideoClock = mMovieDecoder->getVideoClock();
-			mAudioClock = mMovieDecoder->getAudioClock();
-		}
+		mWidth = static_cast<int32_t>( mMovieDecoder->getFrameWidth() );
+		mHeight = static_cast<int32_t>( mMovieDecoder->getFrameHeight() );
+		mDuration = mMovieDecoder->getDuration();
 	}
 
 	void MovieGl::stop()
@@ -218,22 +225,70 @@ namespace ph { namespace ffmpeg {
 
 		mMovieDecoder->stop();
 		mAudioRenderer->stop();
-
-		mVideoClock = 0.0;
-		mAudioClock = 0.0;
 	}
 
-	void MovieGl::seek(double seconds)
+	void MovieGl::seekToTime(float seconds)
 	{
-		if( mMovieDecoder->isInitialized() )
-		{
-			mAudioRenderer->clearBuffers();
-			mMovieDecoder->seek(seconds);
-			mAudioRenderer->play();
+		if( ! mAudioRenderer )
+			return;
 
-			mVideoClock = mMovieDecoder->getVideoClock();
-			mAudioClock = mMovieDecoder->getAudioClock();
-		}
+		if( ! mMovieDecoder->isInitialized() )
+			return;
+
+		mAudioRenderer->clearBuffers();
+		mMovieDecoder->seekToTime((double) seconds);
+		mAudioRenderer->play();
+
+		mTexture.reset();
+		mVideoClock = 0.0;
+	}
+
+	void MovieGl::seekToFrame(int frame)
+	{
+		if( ! mAudioRenderer )
+			return;
+
+		if( ! mMovieDecoder->isInitialized() )
+			return;
+
+		mAudioRenderer->clearBuffers();
+		mMovieDecoder->seekToFrame((uint32_t) frame);
+		mAudioRenderer->play();
+
+		mTexture.reset();
+		mVideoClock = 0.0;
+	}
+
+	void MovieGl::seekToStart()
+	{
+		if( ! mAudioRenderer )
+			return;
+
+		if( ! mMovieDecoder->isInitialized() )
+			return;
+
+		mAudioRenderer->clearBuffers();
+		mMovieDecoder->seekToTime(0.0);
+		mAudioRenderer->play();
+
+		mTexture.reset();
+		mVideoClock = 0.0;
+	}
+
+	void MovieGl::seekToEnd()
+	{
+		if( ! mAudioRenderer )
+			return;
+
+		if( ! mMovieDecoder->isInitialized() )
+			return;
+
+		mAudioRenderer->clearBuffers();
+		mMovieDecoder->seekToTime( (double) mMovieDecoder->getDuration() );
+		mAudioRenderer->play();
+
+		mTexture.reset();
+		mVideoClock = 0.0;
 	}
 
 	void MovieGl::initializeShader()

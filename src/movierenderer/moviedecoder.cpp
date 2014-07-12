@@ -263,7 +263,17 @@ float MovieDecoder::getDuration() const
 	return static_cast<float>(m_pFormatContext->duration / AV_TIME_BASE);
 }
 
-void MovieDecoder::seek(double seconds)
+float MovieDecoder::getFramesPerSecond() const
+{
+	return static_cast<float>(m_pVideoStream->avg_frame_rate.num / (double) m_pVideoStream->avg_frame_rate.den);
+}
+
+uint64_t MovieDecoder::getNumberOfFrames() const
+{
+	return m_pVideoStream->nb_frames;
+}
+
+void MovieDecoder::seekToTime(double seconds)
 {
 	m_SeekTimestamp = (::int64_t)(AV_TIME_BASE * seconds);
 	m_SeekFlags = (seconds < m_AudioClock) ? AVSEEK_FLAG_BACKWARD : 0;
@@ -278,6 +288,13 @@ void MovieDecoder::seek(double seconds)
 
 	m_bSingleFrame = !m_bPlaying;
 	m_bSeeking = true;
+}
+
+void MovieDecoder::seekToFrame(uint32_t frame)
+{
+	double fps = m_pVideoStream->avg_frame_rate.num / (double) m_pVideoStream->avg_frame_rate.den;
+	double seconds = frame/fps;
+	seekToTime(seconds);
 }
 
 bool MovieDecoder::decodeVideoFrame(VideoFrame& frame)
@@ -496,12 +513,11 @@ void MovieDecoder::readPackets()
 {
 	AVPacket    packet;
 
-	while(!m_bDone)
+	while(!m_bDone || m_bSeeking)
 	{
 		if(m_bSeeking)
 		{
 			m_bSeeking = false;
-			m_bPlaying = true;
 			
 			int ret = av_seek_frame(m_pFormatContext, -1, m_SeekTimestamp, m_SeekFlags);
 
@@ -568,6 +584,8 @@ void MovieDecoder::stop()
 {
 	m_VideoClock = 0;
 	m_AudioClock = 0;
+
+	m_bPlaying = false;
 	m_bDone = true;
 	if (m_pPacketReaderThread)
 	{

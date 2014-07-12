@@ -61,9 +61,9 @@ public:
 	//! Returns the movie's length measured in seconds
 	float		getDuration() const { return mDuration; }
 	//! Returns the movie's framerate measured as frames per second
-	///float		getFramerate() const;
+	float		getFramerate() const;
 	//! Returns the total number of frames (video samples) in the movie
-	///int32_t		getNumFrames() const;
+	uint64_t	getNumFrames() const;
 	//! Returns whether the first video track in the movie contains an alpha channel. Returns false in the absence of visual media.
 	///bool		hasAlpha() const;
 
@@ -78,13 +78,13 @@ public:
 	//! Returns the current time of a movie in seconds
 	float		getCurrentTime() const;
 	//! Sets the movie to the time \a seconds
-	///void		seekToTime( float seconds );
+	void		seekToTime( float seconds );
 	//! Sets the movie time to the start time of frame \a frame
-	///void		seekToFrame( int frame );
+	void		seekToFrame( int frame );
 	//! Sets the movie time to its beginning
-	///void		seekToStart();
+	void		seekToStart();
 	//! Sets the movie time to its end
-	///void		seekToEnd();
+	void		seekToEnd();
 	//! Limits the active portion of a movie to a subset beginning at \a startTime seconds and lasting for \a duration seconds. QuickTime will not process the movie outside the active segment.
 	///void		setActiveSegment( float startTime, float duration );
 	//! Resets the active segment to be the entire movie
@@ -123,8 +123,6 @@ public:
 	void	play();
 	//! Stops movie playback.
 	void	stop();
-	//! 
-	void	seek(double seconds);
 
 	//! Sets a function which is called whenever the movie has rendered a new frame during playback. Generally only necessary for advanced users.
 	void	setNewFrameCallback( void(*aNewFrameCallback)( long, void * ), void *aNewFrameCallbackRefcon );
@@ -144,7 +142,6 @@ private:
 	AudioRenderer*		mAudioRenderer;
 	MovieDecoder*		mMovieDecoder;
 
-	double				mAudioClock;
 	double				mVideoClock;
 
 	ci::gl::Texture		mYPlane;
