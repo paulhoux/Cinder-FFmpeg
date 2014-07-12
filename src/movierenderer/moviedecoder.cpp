@@ -309,7 +309,7 @@ bool MovieDecoder::decodeVideoFrame(VideoFrame& frame)
 		if (m_pVideoCodecContext->pix_fmt != PIX_FMT_YUV420P && m_pVideoCodecContext->pix_fmt != PIX_FMT_YUVJ420P)
 			convertVideoFrame(PIX_FMT_YUV420P);
 	}
-	catch(std::exception &e) {
+	catch(const std::exception &) {
 		return false;
 	}
 
@@ -606,7 +606,6 @@ double MovieDecoder::getAudioTimeBase() const
 AudioFormat MovieDecoder::getAudioFormat()
 {
 	AudioFormat format;
-	format.floats = false;
 
 	switch(m_pAudioCodecContext->sample_fmt)
 	{
@@ -627,7 +626,6 @@ AudioFormat MovieDecoder::getAudioFormat()
 		break;
 	case AV_SAMPLE_FMT_FLTP:
 		format.bits = 16;
-		format.floats = true;
 		m_TargetFormat = AV_SAMPLE_FMT_S16;
 		break;
 	default:
@@ -639,8 +637,6 @@ AudioFormat MovieDecoder::getAudioFormat()
 	format.rate             = m_pAudioCodecContext->sample_rate;
 	format.numChannels      = m_pAudioCodecContext->channels;
 	format.framesPerPacket  = m_pAudioCodecContext->frame_size;
-
-	ci::app::console() << "Audio format: bits (" << format.bits << ") rate (" <<  format.rate << ") numChannels (" << format.numChannels << ")" << endl;
 
 	return format;
 }
