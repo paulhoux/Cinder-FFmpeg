@@ -30,14 +30,14 @@
 		<staticLibrary>build/lib/msw/swscale.lib</staticLibrary>
 		<staticLibrary>build/lib/msw/openal32.lib</staticLibrary>
 		
-		<buildCopy>build/bin/msw/avcodec-55.dll</buildCopy>
-		<!--buildCopy>build/bin/msw/avdevice-55.dll</buildCopy-->
-		<!--buildCopy>build/bin/msw/avfilter-4.dll</buildCopy-->
-		<buildCopy>build/bin/msw/avformat-55.dll</buildCopy>
-		<buildCopy>build/bin/msw/avutil-52.dll</buildCopy>
-		<!--buildCopy>build/bin/msw/postproc-52.dll</buildCopy-->
-		<buildCopy>build/bin/msw/swresample-0.dll</buildCopy>
-		<buildCopy>build/bin/msw/swscale-2.dll</buildCopy>
+		<buildCopy>build/bin/msw/avcodec-56.dll</buildCopy>
+		<!--buildCopy>build/bin/msw/avdevice-56.dll</buildCopy-->
+		<!--buildCopy>build/bin/msw/avfilter-5.dll</buildCopy-->
+		<buildCopy>build/bin/msw/avformat-56.dll</buildCopy>
+		<buildCopy>build/bin/msw/avutil-54.dll</buildCopy>
+		<!--buildCopy>build/bin/msw/postproc-53.dll</buildCopy-->
+		<buildCopy>build/bin/msw/swresample-1.dll</buildCopy>
+		<buildCopy>build/bin/msw/swscale-3.dll</buildCopy>
 		<buildCopy>build/bin/msw/openal32.dll</buildCopy>
 	</platform>
 </block>

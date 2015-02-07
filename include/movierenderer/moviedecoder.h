@@ -21,9 +21,12 @@ typedef uint64_t      uint_fast64_t;
 #include <inttypes.h>
 #endif*/
 
+#define __STDC_LIMIT_MACROS  1
+#define __STDC_CONSTANT_MACROS  1
+
 #include <string>
 #include <queue>
-#include <boost/cstdint.hpp>
+#include <cstdint>
 
 extern "C" {
 #include <libavcodec/avcodec.h>
