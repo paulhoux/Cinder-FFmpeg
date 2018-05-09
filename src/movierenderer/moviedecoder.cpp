@@ -498,10 +498,7 @@ void MovieDecoder::readPackets()
 			}
 		}
 		else if( int( m_VideoQueue.size() ) >= m_MaxVideoQueueSize || int( m_AudioQueue.size() ) >= m_MaxAudioQueueSize ) {
-			//boost::xtime xt;
-			//boost::xtime_get( &xt, TIME_UTC_ );
-			//xt.nsec += 25000000; // 25 msec
-			//m_pPacketReaderThread->sleep( xt );
+			this_thread::sleep_for( std::chrono::milliseconds( 25 ) );
 		}
 		else if( m_bPlaying && av_read_frame( m_pFormatContext, &packet ) >= 0 ) {
 			if( packet.stream_index == m_VideoStream ) {

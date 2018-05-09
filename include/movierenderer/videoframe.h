@@ -12,6 +12,9 @@ class VideoFrame {
 		return ( m_YPlane && m_UPlane && m_VPlane && m_Width > 0 && m_Height > 0 );
 	}
 
+	size_t getYDataSize() const;
+	size_t getUDataSize() const;
+	size_t getVDataSize() const;
 	byte * getYPlane() const;
 	byte * getUPlane() const;
 	byte * getVPlane() const;

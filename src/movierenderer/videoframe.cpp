@@ -13,6 +13,21 @@ VideoFrame::VideoFrame()
 {
 }
 
+size_t VideoFrame::getYDataSize() const
+{
+	return getYLineSize() * getHeight();
+}
+
+size_t VideoFrame::getUDataSize() const
+{
+	return getULineSize() * getHeight() / 2;
+}
+
+size_t VideoFrame::getVDataSize() const
+{
+	return getVLineSize() * getHeight() / 2;
+}
+
 byte *VideoFrame::getYPlane() const
 {
 	return m_YPlane;
