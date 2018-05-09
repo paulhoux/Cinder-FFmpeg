@@ -6,7 +6,11 @@
 class VideoFrame {
   public:
 	VideoFrame();
-	virtual ~VideoFrame();
+
+	bool isValid() const
+	{
+		return ( m_YPlane && m_UPlane && m_VPlane && m_Width > 0 && m_Height > 0 );
+	}
 
 	byte * getYPlane() const;
 	byte * getUPlane() const;
@@ -26,15 +30,15 @@ class VideoFrame {
 	void setHeight( int height );
 
   private:
-	byte * m_YPlane;
-	byte * m_UPlane;
-	byte * m_VPlane;
-	double m_Pts;
-	int    m_Width;
-	int    m_Height;
-	int    m_YLineSize;
-	int    m_ULineSize;
-	int    m_VLineSize;
+	byte * m_YPlane = nullptr;
+	byte * m_UPlane = nullptr;
+	byte * m_VPlane = nullptr;
+	double m_Pts = 0.0;
+	int    m_Width = 0;
+	int    m_Height = 0;
+	int    m_YLineSize = 0;
+	int    m_ULineSize = 0;
+	int    m_VLineSize = 0;
 };
 
 #endif

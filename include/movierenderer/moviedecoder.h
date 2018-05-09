@@ -36,6 +36,7 @@ class MovieDecoder {
 	void seekToFrame( uint32_t frame );
 	void start();
 	void stop();
+	void loop( bool enabled = true ) { m_bLoop = enabled; }
 
 	int getFrameWidth() const;
 	int getFrameHeight() const;
@@ -58,6 +59,7 @@ class MovieDecoder {
 
 	bool isInitialized() const { return m_bInitialized; }
 	bool isPlaying() const { return m_bPlaying; }
+	bool isLoop() const { return m_bLoop; }
 	bool isDone() const { return m_bDone; }
 
   private:
@@ -85,10 +87,10 @@ class MovieDecoder {
 	static void startFFmpeg();
 
   private:
-	int                  mVideoStream;
-	int                  mAudioStream;
-	AVFormatContext *    mPFormatContext;
-	AVCodecContext *     mPVideoCodecContext;
+	int                  m_VideoStream;
+	int                  m_AudioStream;
+	AVFormatContext *    m_pFormatContext;
+	AVCodecContext *     m_pVideoCodecContext;
 	AVCodecContext *     m_pAudioCodecContext;
 	AVCodec *            m_pVideoCodec;
 	AVCodec *            m_pAudioCodec;
@@ -112,6 +114,7 @@ class MovieDecoder {
 	bool                 m_bInitialized;
 	bool                 m_bPlaying;
 	bool                 m_bSingleFrame;
+	bool                 m_bLoop;
 	bool                 m_bDone;
 	bool                 m_bSeeking;
 	int                  m_SeekFlags;

@@ -13,10 +13,6 @@ VideoFrame::VideoFrame()
 {
 }
 
-VideoFrame::~VideoFrame()
-{
-}
-
 byte *VideoFrame::getYPlane() const
 {
 	return m_YPlane;
