@@ -234,28 +234,24 @@ double MovieDecoder::getAudioClock() const
 	return m_AudioClock;
 }
 
-float MovieDecoder::getProgress() const
+double MovieDecoder::getProgress() const
 {
-	if( m_pFormatContext ) {
-		return static_cast<float>( m_AudioClock / ( m_pFormatContext->duration / AV_TIME_BASE ) );
-	}
-
-	return 0.f;
+	return m_pFormatContext ? m_AudioClock / getDuration() : 0.0;
 }
 
-float MovieDecoder::getDuration() const
+double MovieDecoder::getDuration() const
 {
-	return static_cast<float>( m_pFormatContext->duration / AV_TIME_BASE );
+	return m_pFormatContext ? m_pFormatContext->duration / double( AV_TIME_BASE ) : 0.0;
 }
 
-float MovieDecoder::getFramesPerSecond() const
+double MovieDecoder::getFramesPerSecond() const
 {
-	return static_cast<float>( m_pVideoStream->avg_frame_rate.num / double( m_pVideoStream->avg_frame_rate.den ) );
+	return m_pVideoStream ? m_pVideoStream->avg_frame_rate.num / double( m_pVideoStream->avg_frame_rate.den ) : 0.0;
 }
 
 uint64_t MovieDecoder::getNumberOfFrames() const
 {
-	return m_pVideoStream->nb_frames;
+	return m_pVideoStream ? m_pVideoStream->nb_frames : 0;
 }
 
 void MovieDecoder::seekToTime( double seconds )
@@ -277,7 +273,10 @@ void MovieDecoder::seekToTime( double seconds )
 
 void MovieDecoder::seekToFrame( uint32_t frame )
 {
-	const double fps = m_pVideoStream->avg_frame_rate.num / double( m_pVideoStream->avg_frame_rate.den );
+	if( !m_pVideoStream )
+		return;
+
+	const double fps = getFramesPerSecond();
 	const double seconds = frame / fps;
 	seekToTime( seconds );
 }

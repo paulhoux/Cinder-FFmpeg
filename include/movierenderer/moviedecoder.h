@@ -51,10 +51,10 @@ class MovieDecoder {
 
 	double getVideoClock() const;
 	double getAudioClock() const;
-	float  getProgress() const;
+	double getProgress() const;
 
-	float    getDuration() const;
-	float    getFramesPerSecond() const;
+	double   getDuration() const;
+	double   getFramesPerSecond() const;
 	uint64_t getNumberOfFrames() const;
 
 	bool isInitialized() const { return m_bInitialized; }
