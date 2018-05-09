@@ -20,25 +20,25 @@
 	<sourcePattern>src/audiorenderer/*.cpp</sourcePattern>
 	<sourcePattern>src/movierenderer/*.cpp</sourcePattern>
 	<platform os="msw">
-		<staticLibrary>build/lib/msw/x86/avcodec.lib</staticLibrary>
-		<!--staticLibrary>build/lib/msw/x86/avdevice.lib</staticLibrary-->
-		<!--staticLibrary>build/lib/msw/x86/avfilter.lib</staticLibrary-->
-		<staticLibrary>build/lib/msw/x86/avformat.lib</staticLibrary>
-		<staticLibrary>build/lib/msw/x86/avutil.lib</staticLibrary>
-		<!--staticLibrary>build/lib/msw/x86/postproc.lib</staticLibrary-->
-		<staticLibrary>build/lib/msw/x86/swresample.lib</staticLibrary>
-		<staticLibrary>build/lib/msw/x86/swscale.lib</staticLibrary>
-		<staticLibrary>build/lib/msw/x86/openal32.lib</staticLibrary>
+		<staticLibrary>build/lib/msw/$(PlatformTarget)/avcodec.lib</staticLibrary>
+		<!--staticLibrary>build/lib/msw/$(PlatformTarget)/avdevice.lib</staticLibrary-->
+		<!--staticLibrary>build/lib/msw/$(PlatformTarget)/avfilter.lib</staticLibrary-->
+		<staticLibrary>build/lib/msw/$(PlatformTarget)/avformat.lib</staticLibrary>
+		<staticLibrary>build/lib/msw/$(PlatformTarget)/avutil.lib</staticLibrary>
+		<!--staticLibrary>build/lib/msw/$(PlatformTarget)/postproc.lib</staticLibrary-->
+		<staticLibrary>build/lib/msw/$(PlatformTarget)/swresample.lib</staticLibrary>
+		<staticLibrary>build/lib/msw/$(PlatformTarget)/swscale.lib</staticLibrary>
+		<staticLibrary>build/lib/msw/$(PlatformTarget)/openal32.lib</staticLibrary>
 		
-		<buildCopy>build/bin/msw/x86/avcodec-58.dll</buildCopy>
-		<!--buildCopy>build/bin/msw/x86/avdevice-58.dll</buildCopy-->
-		<!--buildCopy>build/bin/msw/x86/avfilter-7.dll</buildCopy-->
-		<buildCopy>build/bin/msw/x86/avformat-58.dll</buildCopy>
-		<buildCopy>build/bin/msw/x86/avutil-56.dll</buildCopy>
-		<!--buildCopy>build/bin/msw/x86/postproc-55.dll</buildCopy-->
-		<buildCopy>build/bin/msw/x86/swresample-3.dll</buildCopy>
-		<buildCopy>build/bin/msw/x86/swscale-5.dll</buildCopy>
-		<!--buildCopy>build/bin/msw/x86/openal32.dll</buildCopy-->
+		<buildCopy>build/bin/msw/$(PlatformTarget)/avcodec-58.dll</buildCopy>
+		<!--buildCopy>build/bin/msw/$(PlatformTarget)/avdevice-58.dll</buildCopy-->
+		<!--buildCopy>build/bin/msw/$(PlatformTarget)/avfilter-7.dll</buildCopy-->
+		<buildCopy>build/bin/msw/$(PlatformTarget)/avformat-58.dll</buildCopy>
+		<buildCopy>build/bin/msw/$(PlatformTarget)/avutil-56.dll</buildCopy>
+		<!--buildCopy>build/bin/msw/$(PlatformTarget)/postproc-55.dll</buildCopy-->
+		<buildCopy>build/bin/msw/$(PlatformTarget)/swresample-3.dll</buildCopy>
+		<buildCopy>build/bin/msw/$(PlatformTarget)/swscale-5.dll</buildCopy>
+		<!--buildCopy>build/bin/msw/$(PlatformTarget)/openal32.dll</buildCopy-->
 	</platform>
 </block>
 <template>templates/Basic FFmpeg/template.xml</template>

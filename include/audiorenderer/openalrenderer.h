@@ -1,11 +1,13 @@
 #ifndef OPENAL_RENDERER_H
 #define OPENAL_RENDERER_H
 
+#pragma comment( lib, "OpenAL32.lib" )
+
 #include <al/al.h>
 #include <al/alc.h>
 #include <deque>
 
-#include "audiorenderer.h"
+#include "audiorenderer/audiorenderer.h"
 
 #define NUM_BUFFERS 10
 

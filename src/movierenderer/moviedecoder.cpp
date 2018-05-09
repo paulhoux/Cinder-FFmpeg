@@ -1,17 +1,14 @@
+#include "cinder/App/App.h"
+
 #include "movierenderer/moviedecoder.h"
 #include "audiorenderer/audioframe.h"
 #include "movierenderer/videoframe.h"
 
 #include <cassert>
 
-//#include <boost/bind.hpp>
-//#include <boost/thread/xtime.hpp>
-
 extern "C" {
 #include <libswscale/swscale.h>
 }
-
-#include "cinder/App/App.h"
 
 #define VIDEO_QUEUESIZE 200
 #define AUDIO_QUEUESIZE 50

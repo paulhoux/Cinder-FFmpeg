@@ -1,30 +1,12 @@
 #ifndef MOVIEDECODER_H
 #define MOVIEDECODER_H
 
-/*#ifdef WIN32
-typedef signed char  int8_t;
-typedef signed short int16_t;
-typedef signed int   int32_t;
-typedef unsigned char  uint8_t;
-typedef unsigned short uint16_t;
-typedef unsigned int   uint32_t;
-typedef signed long long   int64_t;
-typedef unsigned long long uint64_t;
-typedef signed char int_fast8_t;
-typedef signed int  int_fast16_t;
-typedef signed int  int_fast32_t;
-typedef unsigned char uint_fast8_t;
-typedef unsigned int  uint_fast16_t;
-typedef unsigned int  uint_fast32_t;
-typedef uint64_t      uint_fast64_t;
-#else
-#include <inttypes.h>
-#endif*/
+#pragma comment( lib, "avcodec.lib" )
+#pragma comment( lib, "avformat.lib" )
+#pragma comment( lib, "avutil.lib" )
+#pragma comment( lib, "swresample.lib" )
+#pragma comment( lib, "swscale.lib" )
 
-//#define __STDC_LIMIT_MACROS 1
-//#define __STDC_CONSTANT_MACROS 1
-
-#include <cstdint>
 #include <mutex>
 #include <queue>
 #include <string>
@@ -36,11 +18,8 @@ extern "C" {
 #include <libswresample/swresample.h>
 }
 
-//#include <boost/thread/thread.hpp>
-//#include <boost/thread/mutex.hpp>
-
 #include "audiorenderer/audioformat.h"
-#include "videoframe.h"
+#include "movierenderer/videoframe.h"
 
 #define MAX_AUDIO_FRAME_SIZE 192000
 

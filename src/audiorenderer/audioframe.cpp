@@ -1,4 +1,5 @@
 #include "audiorenderer/audioframe.h"
+
 #include <memory>
 
 #define USE_MEMCPY 1
