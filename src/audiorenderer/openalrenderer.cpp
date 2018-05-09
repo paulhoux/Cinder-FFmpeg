@@ -4,67 +4,66 @@
 #include "audiorenderer/audioformat.h"
 #include "common/numericoperations.h"
 
-#include <iostream>
 #include <assert.h>
 #include <stdexcept>
 
-#include "cinder/app/AppBasic.h"
+#include "cinder/app/App.h"
 
 using namespace std;
 
-ALCdevice* OpenALRenderer::m_pAudioDevice = nullptr;
-ALCcontext* OpenALRenderer::m_pAlcContext = nullptr;
-int OpenALRenderer::m_RefCount = 0;
+ALCdevice* OpenAlRenderer::mPAudioDevice = nullptr;
+ALCcontext* OpenAlRenderer::mPAlcContext = nullptr;
+int OpenAlRenderer::mRefCount = 0;
 
-OpenALRenderer::OpenALRenderer()
+OpenAlRenderer::OpenAlRenderer()
 : AudioRenderer()
-, m_AudioSource(0)
-, m_CurrentBuffer(0)
-, m_Volume(1.f)
-, m_AudioFormat(AL_FORMAT_STEREO16)
-, m_NumChannels(0)
-, m_Frequency(0)
+, mAudioSource(0)
+, mCurrentBuffer(0)
+, mVolume(1.f)
+, mAudioFormat(AL_FORMAT_STEREO16)
+, mNumChannels(0)
+, mFrequency(0)
 {
-	if(!m_pAudioDevice)
-		m_pAudioDevice = alcOpenDevice(NULL);
+	if(!mPAudioDevice)
+		mPAudioDevice = alcOpenDevice(NULL);
 
-	if (m_pAudioDevice && !m_pAlcContext)
+	if (mPAudioDevice && !mPAlcContext)
 	{
-		m_pAlcContext = alcCreateContext(m_pAudioDevice, NULL);
-		alcMakeContextCurrent(m_pAlcContext);
+		mPAlcContext = alcCreateContext(mPAudioDevice, NULL);
+		alcMakeContextCurrent(mPAlcContext);
 	}
 
-	m_RefCount++;
+	mRefCount++;
 
     assert(alGetError() == AL_NO_ERROR);
-    alGenBuffers(NUM_BUFFERS, m_AudioBuffers);
-    alGenSources(1, &m_AudioSource);
+    alGenBuffers(NUM_BUFFERS, mAudioBuffers);
+    alGenSources(1, &mAudioSource);
 }
 
-OpenALRenderer::~OpenALRenderer()
+OpenAlRenderer::~OpenAlRenderer()
 {
-    alSourceStop(m_AudioSource);
-    alDeleteSources(1, &m_AudioSource);
-    alDeleteBuffers(NUM_BUFFERS, m_AudioBuffers);
+    alSourceStop(mAudioSource);
+    alDeleteSources(1, &mAudioSource);
+    alDeleteBuffers(NUM_BUFFERS, mAudioBuffers);
 
-	if(--m_RefCount <= 0)
+	if(--mRefCount <= 0)
 	{
-		if (m_pAlcContext)
+		if (mPAlcContext)
 		{
 			alcMakeContextCurrent(NULL);
-			alcDestroyContext(m_pAlcContext);
-			m_pAlcContext = nullptr;
+			alcDestroyContext(mPAlcContext);
+			mPAlcContext = nullptr;
 		}
 
-		if(m_pAudioDevice)
+		if(mPAudioDevice)
 		{
-			alcCloseDevice(m_pAudioDevice);
-			m_pAudioDevice = nullptr;
+			alcCloseDevice(mPAudioDevice);
+			mPAudioDevice = nullptr;
 		}
 	}
 }
 
-void OpenALRenderer::setFormat(const AudioFormat& format)
+void OpenAlRenderer::setFormat(const AudioFormat& format)
 {
 	switch (format.bits)
 	{
@@ -72,22 +71,22 @@ void OpenALRenderer::setFormat(const AudioFormat& format)
 		switch(format.numChannels)
 		{
 		case 1:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_MONO8");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_MONO8");
 			break;
 		case 2:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_STEREO8");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_STEREO8");
 			break;
 		case 4:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_QUAD8");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_QUAD8");
 			break;
 		case 6:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_51CHN8");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_51CHN8");
 			break;
 		case 7:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_61CHN8");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_61CHN8");
 			break;
 		case 8:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_71CHN8");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_71CHN8");
 			break;
 		}
 
@@ -98,22 +97,22 @@ void OpenALRenderer::setFormat(const AudioFormat& format)
 		switch(format.numChannels)
 		{
 		case 1:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_MONO16");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_MONO16");
 			break;
 		case 2:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_STEREO16");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_STEREO16");
 			break;
 		case 4:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_QUAD16");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_QUAD16");
 			break;
 		case 6:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_51CHN16");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_51CHN16");
 			break;
 		case 7:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_61CHN16");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_61CHN16");
 			break;
 		case 8:
-			m_AudioFormat = alGetEnumValue("AL_FORMAT_71CHN16");
+			mAudioFormat = alGetEnumValue("AL_FORMAT_71CHN16");
 			break;
 		}
 
@@ -124,116 +123,116 @@ void OpenALRenderer::setFormat(const AudioFormat& format)
 		throw logic_error("OpenAlRenderer: unsupported format");
 	}
 
-	m_NumChannels = format.numChannels;
-    m_Frequency = format.rate;
+	mNumChannels = format.numChannels;
+    mFrequency = format.rate;
 }
 
-bool OpenALRenderer::hasQueuedFrames()
+bool OpenAlRenderer::hasQueuedFrames()
 {
 	int queued = 0;
-    alGetSourcei(m_AudioSource, AL_BUFFERS_QUEUED, &queued);
+    alGetSourcei(mAudioSource, AL_BUFFERS_QUEUED, &queued);
     return queued > 0;
 }
 
-bool OpenALRenderer::hasBufferSpace()
+bool OpenAlRenderer::hasBufferSpace()
 {
     int queued = 0;
-    alGetSourcei(m_AudioSource, AL_BUFFERS_QUEUED, &queued);
+    alGetSourcei(mAudioSource, AL_BUFFERS_QUEUED, &queued);
     return queued < NUM_BUFFERS;
 }
 
-void OpenALRenderer::queueFrame(const AudioFrame& frame)
+void OpenAlRenderer::queueFrame(const AudioFrame& frame)
 {
 	assert(frame.getFrameData());
-    alBufferData(m_AudioBuffers[m_CurrentBuffer], m_AudioFormat, frame.getFrameData(), frame.getDataSize(), m_Frequency);
-    alSourceQueueBuffers(m_AudioSource, 1, &m_AudioBuffers[m_CurrentBuffer]);
-    m_PtsQueue.push_back(frame.getPts());
+    alBufferData(mAudioBuffers[mCurrentBuffer], mAudioFormat, frame.getFrameData(), frame.getDataSize(), mFrequency);
+    alSourceQueueBuffers(mAudioSource, 1, &mAudioBuffers[mCurrentBuffer]);
+    mPtsQueue.push_back(frame.getPts());
 
     play();
 
-    ++m_CurrentBuffer;
-    m_CurrentBuffer %= NUM_BUFFERS;
+    ++mCurrentBuffer;
+    mCurrentBuffer %= NUM_BUFFERS;
 
 	assert(alGetError() == AL_NO_ERROR);
 }
 
-void OpenALRenderer::clearBuffers()
+void OpenAlRenderer::clearBuffers()
 {
     stop();
 
     int queued = 0;
-    alGetSourcei(m_AudioSource, AL_BUFFERS_QUEUED, &queued);
+    alGetSourcei(mAudioSource, AL_BUFFERS_QUEUED, &queued);
 
     if (queued > 0)
     {
         ALuint* buffers = new ALuint[queued];
-        alSourceUnqueueBuffers(m_AudioSource, queued, buffers);
+        alSourceUnqueueBuffers(mAudioSource, queued, buffers);
         delete[] buffers;
     }
-    m_PtsQueue.clear();
+    mPtsQueue.clear();
 }
 
-void OpenALRenderer::flushBuffers()
+void OpenAlRenderer::flushBuffers()
 {
     int processed = 0;
-    alGetSourcei(m_AudioSource, AL_BUFFERS_PROCESSED, &processed);
+    alGetSourcei(mAudioSource, AL_BUFFERS_PROCESSED, &processed);
 
     while(processed--)
     {
         ALuint buffer;
-        alSourceUnqueueBuffers(m_AudioSource, 1, &buffer);
+        alSourceUnqueueBuffers(mAudioSource, 1, &buffer);
         assert(alGetError() == AL_NO_ERROR);
-        m_PtsQueue.pop_front();
+        mPtsQueue.pop_front();
     }
 }
 
-bool OpenALRenderer::isPlaying()
+bool OpenAlRenderer::isPlaying()
 {
     ALenum state;
-    alGetSourcei(m_AudioSource, AL_SOURCE_STATE, &state);
+    alGetSourcei(mAudioSource, AL_SOURCE_STATE, &state);
 
     return (state == AL_PLAYING);
 }
 
-void OpenALRenderer::play()
+void OpenAlRenderer::play()
 {
-    if (!isPlaying() && !m_PtsQueue.empty())
+    if (!isPlaying() && !mPtsQueue.empty())
     {
-        alSourcePlay(m_AudioSource);
+        alSourcePlay(mAudioSource);
     }
 }
 
-void OpenALRenderer::pause()
+void OpenAlRenderer::pause()
 {
     if (isPlaying())
     {
-        alSourcePause(m_AudioSource);
+        alSourcePause(mAudioSource);
     }
 }
 
-void OpenALRenderer::stop()
+void OpenAlRenderer::stop()
 {
-    alSourceStop(m_AudioSource);
+    alSourceStop(mAudioSource);
     flushBuffers();
 }
 
-int OpenALRenderer::getBufferSize()
+int OpenAlRenderer::getBufferSize()
 {
     return NUM_BUFFERS;
 }
 
-void OpenALRenderer::adjustVolume(float offset)
+void OpenAlRenderer::adjustVolume(float offset)
 {
-    m_Volume += offset;
-    NumericOperations::clip(m_Volume, 0.f, 1.f);
-    alSourcef(m_AudioSource, AL_GAIN, m_Volume);
+    mVolume += offset;
+    NumericOperations::clip(mVolume, 0.f, 1.f);
+    alSourcef(mAudioSource, AL_GAIN, mVolume);
 }
 
-double OpenALRenderer::getCurrentPts()
+double OpenAlRenderer::getCurrentPts()
 {
 	float offsetInSeconds = 0.f;
-	alGetSourcef( m_AudioSource, AL_SEC_OFFSET, &offsetInSeconds );
+	alGetSourcef( mAudioSource, AL_SEC_OFFSET, &offsetInSeconds );
 
-    return m_PtsQueue.empty() ? 0 : m_PtsQueue.front() + double(offsetInSeconds);
+    return mPtsQueue.empty() ? 0 : mPtsQueue.front() + double(offsetInSeconds);
 }
 

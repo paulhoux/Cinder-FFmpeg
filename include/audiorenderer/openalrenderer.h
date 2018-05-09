@@ -1,11 +1,10 @@
 #ifndef OPENAL_RENDERER_H
 #define OPENAL_RENDERER_H
 
-#include <AL/al.h>
-#include <AL/alc.h>
-#include <AL/alext.h>
-
+#include <al/al.h>
+#include <al/alc.h>
 #include <deque>
+
 #include "audiorenderer.h"
 
 #define NUM_BUFFERS 10
@@ -13,41 +12,39 @@
 class AudioFrame;
 struct AudioFormat;
 
-class OpenALRenderer : public AudioRenderer
-{
-public:
-    OpenALRenderer();
-    virtual ~OpenALRenderer();
+class OpenAlRenderer : public AudioRenderer {
+  public:
+	OpenAlRenderer();
+	virtual ~OpenAlRenderer();
 
-    void setFormat(const AudioFormat& format);
-	bool hasQueuedFrames();
-    bool hasBufferSpace();
-    void queueFrame(const AudioFrame& frame);
-    void clearBuffers();
-    void flushBuffers();
-    int getBufferSize();
-    double getCurrentPts();
-    void play();
-    void pause();
-    void stop();
-    void adjustVolume(float offset);
+	void   setFormat( const AudioFormat &format ) override;
+	bool   hasQueuedFrames() override;
+	bool   hasBufferSpace() override;
+	void   queueFrame( const AudioFrame &frame ) override;
+	void   clearBuffers() override;
+	void   flushBuffers() override;
+	int    getBufferSize();
+	double getCurrentPts() override;
+	void   play() override;
+	void   pause() override;
+	void   stop() override;
+	void   adjustVolume( float offset ) override;
 
-private:
-    bool isPlaying();
+  private:
+	bool isPlaying();
 
-    static ALCdevice*   m_pAudioDevice;
-    static ALCcontext*  m_pAlcContext;
-	static int          m_RefCount;
+	static ALCdevice * mPAudioDevice;
+	static ALCcontext *mPAlcContext;
+	static int         mRefCount;
 
-    ALuint              m_AudioSource;
-    ALuint              m_AudioBuffers[NUM_BUFFERS];
-    int                 m_CurrentBuffer;
-    float               m_Volume;
-    ALenum              m_AudioFormat;
-	ALsizei				m_NumChannels;
-    ALsizei             m_Frequency;
-
-    std::deque<double>  m_PtsQueue;
+	ALuint             mAudioSource;
+	ALuint             mAudioBuffers[NUM_BUFFERS];
+	int                mCurrentBuffer;
+	float              mVolume;
+	ALenum             mAudioFormat;
+	ALsizei            mNumChannels;
+	ALsizei            mFrequency;
+	std::deque<double> mPtsQueue;
 };
 
 #endif

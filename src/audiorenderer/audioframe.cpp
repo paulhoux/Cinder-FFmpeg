@@ -4,44 +4,44 @@
 #define USE_MEMCPY 1
 
 AudioFrame::AudioFrame()
-: m_FrameData(nullptr)
-, m_DataSize(0)
-, m_Pts(0.0)
+: mFrameData(nullptr)
+, mDataSize(0)
+, mPts(0.0)
 {
 }
 
 AudioFrame::~AudioFrame()
 {
 #if USE_MEMCPY
-	if(m_FrameData)
-		delete[] m_FrameData;
+	if(mFrameData)
+		delete[] mFrameData;
 #endif
 
-	m_FrameData = nullptr;
+	mFrameData = nullptr;
 }
 
 byte* AudioFrame::getFrameData() const
 {
-    return m_FrameData;
+    return mFrameData;
 }
 
 uint32 AudioFrame::getDataSize() const
 {
-    return m_DataSize;
+    return mDataSize;
 }
 
 double AudioFrame::getPts() const
 {
-    return m_Pts;
+    return mPts;
 }
 
 void AudioFrame::setFrameData(byte* data)
 {
 #if USE_MEMCPY
-	if(!m_FrameData)
-		m_FrameData = new byte[m_DataSize];
+	if(!mFrameData)
+		mFrameData = new byte[mDataSize];
 
-	memcpy(m_FrameData, data, m_DataSize);
+	memcpy(mFrameData, data, mDataSize);
 #else
 	m_FrameData = data;
 #endif
@@ -50,16 +50,16 @@ void AudioFrame::setFrameData(byte* data)
 void AudioFrame::setDataSize(uint32 size)
 {
 #if USE_MEMCPY
-	if(size > m_DataSize && m_FrameData)
+	if(size > mDataSize && mFrameData)
 	{
-		delete[] m_FrameData;
-		m_FrameData = nullptr;
+		delete[] mFrameData;
+		mFrameData = nullptr;
 	}
 #endif
-    m_DataSize = size;
+    mDataSize = size;
 }
 
 void AudioFrame::setPts(double pts)
 {
-    m_Pts = pts;
+    mPts = pts;
 }

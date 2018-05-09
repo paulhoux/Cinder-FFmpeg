@@ -3,16 +3,14 @@
 
 class AudioRenderer;
 
-class AudioRendererFactory
-{
-public:
-    enum AudioOutputType
-    {
-        OPENAL_OUTPUT,
-        ALSA_OUTPUT
-    };
+class AudioRendererFactory {
+  public:
+	enum AudioOutputType {
+		OPENAL_OUTPUT,
+		ALSA_OUTPUT
+	};
 
-    static AudioRenderer* create(AudioOutputType type);
+	static AudioRenderer *create( AudioOutputType type );
 };
 
 #endif
