@@ -100,6 +100,7 @@ class MovieDecoder {
 	AVSampleFormat       m_TargetFormat;
 	uint8_t              m_AudioBuffer[MAX_AUDIO_FRAME_SIZE * 4];
 	AVFrame *            m_pFrame;
+	AVFrame *            m_pConvertedFrame;
 	AVPacket             m_FlushPacket;
 	SwrContext *         m_pSwrContext;
 	int                  m_MaxVideoQueueSize;

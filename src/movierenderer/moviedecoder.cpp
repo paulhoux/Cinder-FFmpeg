@@ -7,6 +7,7 @@
 #include <cassert>
 
 extern "C" {
+#include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
 }
 
@@ -38,6 +39,7 @@ MovieDecoder::MovieDecoder( const string &filename )
     , m_pVideoStream( NULL )
     , m_pAudioStream( NULL )
     , m_pFrame( NULL )
+    , m_pConvertedFrame( NULL )
     , m_pSwrContext( NULL )
     , m_MaxVideoQueueSize( VIDEO_QUEUESIZE )
     , m_MaxAudioQueueSize( AUDIO_QUEUESIZE )
@@ -96,8 +98,13 @@ MovieDecoder::~MovieDecoder()
 
 	m_bInitialized = false;
 
+	if( m_pConvertedFrame ) {
+		av_frame_free( &m_pConvertedFrame );
+		m_pConvertedFrame = NULL;
+	}
+
 	if( m_pFrame ) {
-		av_free( m_pFrame );
+		av_frame_free( &m_pFrame );
 		m_pFrame = NULL;
 	}
 
@@ -309,23 +316,32 @@ bool MovieDecoder::decodeVideoFrame( VideoFrame &frame )
 		throw logic_error( "MovieDecoder: Interlaced video is not supported yet." );
 	}
 
+	m_VideoClock = packet.dts * av_q2d( m_pVideoStream->time_base );
+
+	frame.setPts( m_VideoClock );
+	frame.setWidth( getFrameWidth() );
+	frame.setHeight( getFrameHeight() );
+
 	try {
-		if( m_pVideoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P && m_pVideoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P )
+		if( m_pVideoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P && m_pVideoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P ) {
+			if( !m_pConvertedFrame )
+				createAVFrame( &m_pConvertedFrame, frame.getWidth(), frame.getHeight(), AV_PIX_FMT_YUV420P );
+
 			convertVideoFrame( AV_PIX_FMT_YUV420P );
+
+			frame.storeYPlane( m_pConvertedFrame->data[0], m_pConvertedFrame->linesize[0] );
+			frame.storeUPlane( m_pConvertedFrame->data[1], m_pConvertedFrame->linesize[1] );
+			frame.storeVPlane( m_pConvertedFrame->data[2], m_pConvertedFrame->linesize[2] );
+		}
+		else {
+			frame.storeYPlane( m_pFrame->data[0], m_pFrame->linesize[0] );
+			frame.storeUPlane( m_pFrame->data[1], m_pFrame->linesize[1] );
+			frame.storeVPlane( m_pFrame->data[2], m_pFrame->linesize[2] );
+		}
 	}
 	catch( const std::exception & ) {
 		return false;
 	}
-
-	m_VideoClock = packet.dts * av_q2d( m_pVideoStream->time_base );
-
-	frame.setWidth( getFrameWidth() );
-	frame.setHeight( getFrameHeight() );
-
-	frame.storeYPlane( m_pFrame->data[0], m_pFrame->linesize[0] );
-	frame.storeUPlane( m_pFrame->data[1], m_pFrame->linesize[1] );
-	frame.storeVPlane( m_pFrame->data[2], m_pFrame->linesize[2] );
-	frame.setPts( m_VideoClock );
 
 	return frameDecoded;
 }
@@ -333,18 +349,11 @@ bool MovieDecoder::decodeVideoFrame( VideoFrame &frame )
 void MovieDecoder::convertVideoFrame( AVPixelFormat format )
 {
 	SwsContext *scaleContext = sws_getContext( m_pVideoCodecContext->width, m_pVideoCodecContext->height, m_pVideoCodecContext->pix_fmt, m_pVideoCodecContext->width, m_pVideoCodecContext->height, format, 0, NULL, NULL, NULL );
-
 	if( NULL == scaleContext )
 		throw logic_error( "MovieDecoder: Failed to create resize context" );
 
-	AVFrame *convertedFrame = NULL;
-	createAVFrame( &convertedFrame, m_pVideoCodecContext->width, m_pVideoCodecContext->height, format );
-
-	sws_scale( scaleContext, m_pFrame->data, m_pFrame->linesize, 0, m_pVideoCodecContext->height, convertedFrame->data, convertedFrame->linesize );
+	sws_scale( scaleContext, m_pFrame->data, m_pFrame->linesize, 0, m_pVideoCodecContext->height, m_pConvertedFrame->data, m_pConvertedFrame->linesize );
 	sws_freeContext( scaleContext );
-
-	av_free( m_pFrame );
-	m_pFrame = convertedFrame;
 }
 
 void MovieDecoder::createAVFrame( AVFrame **avFrame, int width, int height, AVPixelFormat format ) const
@@ -353,8 +362,11 @@ void MovieDecoder::createAVFrame( AVFrame **avFrame, int width, int height, AVPi
 
 	const int numBytes = avpicture_get_size( format, width, height );
 	uint8_t * pBuffer = new uint8_t[numBytes];
-
 	avpicture_fill( reinterpret_cast<AVPicture *>( *avFrame ), pBuffer, format, width, height );
+
+	//const int numBytes = av_image_get_buffer_size( format, width, height, 1 );
+	//uint8_t * pBuffer = static_cast<uint8_t *>( av_malloc( numBytes ) );
+	//av_image_fill_arrays( ( *avFrame )->data, ( *avFrame )->linesize, pBuffer, format, ( *avFrame )->width, ( *avFrame )->height, 1 );
 }
 
 bool MovieDecoder::decodeVideoPacket( AVPacket &packet )
@@ -467,7 +479,7 @@ bool MovieDecoder::decodeAudioFrame( AudioFrame &frame )
 	av_free_packet( &packet );
 
 	if( decodedFrame )
-		av_free( decodedFrame );
+		av_frame_free( &decodedFrame );
 
 	return frameDecoded;
 }
