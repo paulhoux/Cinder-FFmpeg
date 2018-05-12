@@ -305,8 +305,8 @@ bool MovieDecoder::decodeVideoFrame( VideoFrame &frame )
 	}
 
 	if( m_pFrame->interlaced_frame ) {
-		throw logic_error( "MovieDecoder: Interlaced video is not supported" );
-		// avpicture_deinterlace( reinterpret_cast<AVPicture *>( m_pFrame ), reinterpret_cast<AVPicture *>( m_pFrame ), mPVideoCodecContext->pix_fmt, mPVideoCodecContext->width, mPVideoCodecContext->height );
+		// See: https://stackoverflow.com/a/40018558/858219
+		throw logic_error( "MovieDecoder: Interlaced video is not supported yet." );
 	}
 
 	try {
@@ -498,7 +498,7 @@ void MovieDecoder::readPackets()
 			}
 		}
 		else if( int( m_VideoQueue.size() ) >= m_MaxVideoQueueSize || int( m_AudioQueue.size() ) >= m_MaxAudioQueueSize ) {
-			this_thread::sleep_for( std::chrono::milliseconds( 25 ) );
+			this_thread::sleep_for( std::chrono::milliseconds( 10 ) );
 		}
 		else if( m_bPlaying && av_read_frame( m_pFormatContext, &packet ) >= 0 ) {
 			if( packet.stream_index == m_VideoStream ) {
