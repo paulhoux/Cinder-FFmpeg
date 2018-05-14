@@ -35,8 +35,19 @@ class MovieDecoder {
 	void seekToTime( double seconds );
 	void seekToFrame( uint32_t frame );
 	void start();
+	void pause();
+	void resume();
 	void stop();
 	void loop( bool enabled = true ) { m_bLoop = enabled; }
+
+	bool hasVideo() const { return m_bHasVideo; }
+	bool hasAudio() const { return m_bHasAudio; }
+	bool isInitialized() const { return m_bInitialized; }
+
+	bool isPlaying() const { return m_bPlaying; }
+	bool isPaused() const { return m_bPaused; }
+	bool isLoop() const { return m_bLoop; }
+	bool isDone() const { return m_bDone; }
 
 	int getFrameWidth() const;
 	int getFrameHeight() const;
@@ -56,11 +67,6 @@ class MovieDecoder {
 	double   getDuration() const;
 	double   getFramesPerSecond() const;
 	uint64_t getNumberOfFrames() const;
-
-	bool isInitialized() const { return m_bInitialized; }
-	bool isPlaying() const { return m_bPlaying; }
-	bool isLoop() const { return m_bLoop; }
-	bool isDone() const { return m_bDone; }
 
   private:
 	// copy ops are private to prevent copying
@@ -113,7 +119,10 @@ class MovieDecoder {
 	std::mutex           m_DecodeAudioMutex;
 	std::thread *        m_pPacketReaderThread;
 	bool                 m_bInitialized;
+	bool                 m_bHasVideo;
+	bool                 m_bHasAudio;
 	bool                 m_bPlaying;
+	bool                 m_bPaused;
 	bool                 m_bSingleFrame;
 	bool                 m_bLoop;
 	bool                 m_bDone;

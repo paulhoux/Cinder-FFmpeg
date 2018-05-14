@@ -46,6 +46,7 @@ MovieDecoder::MovieDecoder( const string &filename )
     , m_pPacketReaderThread( NULL )
     , m_bInitialized( false )
     , m_bPlaying( false )
+    , m_bPaused( false )
     , m_bSingleFrame( false )
     , m_bLoop( false )
     , m_bDone( false )
@@ -53,7 +54,6 @@ MovieDecoder::MovieDecoder( const string &filename )
     , m_AudioClock( 0.0 )
     , m_VideoClock( 0.0 )
 {
-	bool ok = true;
 	m_bInitialized = false;
 
 	startFFmpeg();
@@ -88,8 +88,9 @@ MovieDecoder::MovieDecoder( const string &filename )
 	//av_dump_format(m_pFormatContext, 0, filename.c_str(), false);
 #endif
 
-	ok = ok && initializeVideo();
-	m_bInitialized = ok && initializeAudio();
+	m_bHasVideo = initializeVideo();
+	m_bHasAudio = initializeAudio();
+	m_bInitialized = ( m_bHasVideo || m_bHasAudio );
 }
 
 MovieDecoder::~MovieDecoder()
@@ -148,6 +149,7 @@ bool MovieDecoder::initializeVideo()
 
 	if( m_VideoStream == -1 ) {
 		throw logic_error( "MovieDecoder: Could not find video stream" );
+		return false;
 	}
 
 	m_pVideoCodecContext = m_pFormatContext->streams[m_VideoStream]->codec;
@@ -157,6 +159,7 @@ bool MovieDecoder::initializeVideo()
 		// set to NULL, otherwise avcodec_close(m_pVideoCodecContext) crashes
 		m_pVideoCodecContext = NULL;
 		throw logic_error( "MovieDecoder: Video Codec not found" );
+		return false;
 	}
 
 	m_pVideoCodecContext->workaround_bugs = 1;
@@ -169,6 +172,7 @@ bool MovieDecoder::initializeVideo()
 #endif
 	{
 		throw logic_error( "MovieDecoder: Could not open video codec" );
+		return false;
 	}
 
 	m_pFrame = av_frame_alloc();
@@ -192,7 +196,6 @@ bool MovieDecoder::initializeAudio()
 	}
 
 	if( m_AudioStream == -1 ) {
-		throw logic_error( "MovieDecoder: No audiostream found" );
 		return false;
 	}
 
@@ -205,6 +208,7 @@ bool MovieDecoder::initializeAudio()
 		// set to NULL, otherwise avcodec_close(m_pAudioCodecContext) crashes
 		m_pAudioCodecContext = NULL;
 		throw logic_error( "MovieDecoder: Audio Codec not found" );
+		return false;
 	}
 
 	m_pAudioCodecContext->workaround_bugs = 1;
@@ -216,6 +220,7 @@ bool MovieDecoder::initializeAudio()
 #endif
 	{
 		throw logic_error( "MovieDecoder: Could not open audio codec" );
+		return false;
 	}
 
 	return true;
@@ -243,7 +248,7 @@ double MovieDecoder::getAudioClock() const
 
 double MovieDecoder::getProgress() const
 {
-	return m_pFormatContext ? m_AudioClock / getDuration() : 0.0;
+	return m_pFormatContext ? m_bHasAudio ? m_AudioClock / getDuration() : m_VideoClock / getDuration() : 0.0;
 }
 
 double MovieDecoder::getDuration() const
@@ -290,6 +295,9 @@ void MovieDecoder::seekToFrame( uint32_t frame )
 
 bool MovieDecoder::decodeVideoFrame( VideoFrame &frame )
 {
+	if( !m_bHasVideo )
+		return false;
+
 	AVPacket packet;
 	bool     frameDecoded = false;
 
@@ -386,6 +394,9 @@ bool MovieDecoder::decodeVideoPacket( AVPacket &packet )
 
 bool MovieDecoder::decodeAudioFrame( AudioFrame &frame )
 {
+	if( !m_bHasAudio )
+		return false;
+
 	bool frameDecoded = false;
 
 	AVPacket packet;
@@ -523,7 +534,7 @@ void MovieDecoder::readPackets()
 				av_free_packet( &packet );
 			}
 		}
-		else if( m_bLoop ) {
+		else if( m_bLoop && !m_bPaused ) {
 			const auto stream = m_pFormatContext->streams[m_VideoStream];
 			avio_seek( m_pFormatContext->pb, 0, SEEK_SET );
 			avformat_seek_file( m_pFormatContext, m_VideoStream, 0, 0, stream->duration, 0 );
@@ -539,9 +550,26 @@ void MovieDecoder::start()
 	stop();
 
 	m_bPlaying = true;
+	m_bPaused = false;
 	m_bDone = false;
 	if( !m_pPacketReaderThread ) {
 		m_pPacketReaderThread = new std::thread( std::bind( &MovieDecoder::readPackets, this ) );
+	}
+}
+
+void MovieDecoder::pause()
+{
+	if( m_bPlaying && !m_bPaused ) {
+		m_bPlaying = false;
+		m_bPaused = true;
+	}
+}
+
+void MovieDecoder::resume()
+{
+	if( !m_bPlaying && m_bPaused ) {
+		m_bPlaying = true;
+		m_bPaused = false;
 	}
 }
 
@@ -551,6 +579,7 @@ void MovieDecoder::stop()
 	m_AudioClock = 0;
 
 	m_bPlaying = false;
+	m_bPaused = false;
 	m_bDone = true;
 	if( m_pPacketReaderThread ) {
 		m_pPacketReaderThread->join();
@@ -624,35 +653,37 @@ AudioFormat MovieDecoder::getAudioFormat()
 {
 	AudioFormat format;
 
-	switch( m_pAudioCodecContext->sample_fmt ) {
-	case AV_SAMPLE_FMT_U8:
-	case AV_SAMPLE_FMT_U8P:
-		format.bits = 8;
-		m_TargetFormat = AV_SAMPLE_FMT_U8;
-		break;
-	case AV_SAMPLE_FMT_S16:
-	case AV_SAMPLE_FMT_S16P:
-		format.bits = 16;
-		m_TargetFormat = AV_SAMPLE_FMT_S16;
-		break;
-	case AV_SAMPLE_FMT_S32:
-	case AV_SAMPLE_FMT_S32P:
-		format.bits = 32;
-		m_TargetFormat = AV_SAMPLE_FMT_S16;
-		break;
-	case AV_SAMPLE_FMT_FLTP:
-		format.bits = 16;
-		m_TargetFormat = AV_SAMPLE_FMT_S16;
-		break;
-	default:
-		// try to resample the audio to 16-but signed integers
-		format.bits = 16;
-		m_TargetFormat = AV_SAMPLE_FMT_S16;
-	}
+	if( m_pAudioCodecContext ) {
+		switch( m_pAudioCodecContext->sample_fmt ) {
+		case AV_SAMPLE_FMT_U8:
+		case AV_SAMPLE_FMT_U8P:
+			format.bits = 8;
+			m_TargetFormat = AV_SAMPLE_FMT_U8;
+			break;
+		case AV_SAMPLE_FMT_S16:
+		case AV_SAMPLE_FMT_S16P:
+			format.bits = 16;
+			m_TargetFormat = AV_SAMPLE_FMT_S16;
+			break;
+		case AV_SAMPLE_FMT_S32:
+		case AV_SAMPLE_FMT_S32P:
+			format.bits = 32;
+			m_TargetFormat = AV_SAMPLE_FMT_S16;
+			break;
+		case AV_SAMPLE_FMT_FLTP:
+			format.bits = 16;
+			m_TargetFormat = AV_SAMPLE_FMT_S16;
+			break;
+		default:
+			// try to resample the audio to 16-but signed integers
+			format.bits = 16;
+			m_TargetFormat = AV_SAMPLE_FMT_S16;
+		}
 
-	format.rate = m_pAudioCodecContext->sample_rate;
-	format.numChannels = m_pAudioCodecContext->channels;
-	format.framesPerPacket = m_pAudioCodecContext->frame_size;
+		format.rate = m_pAudioCodecContext->sample_rate;
+		format.numChannels = m_pAudioCodecContext->channels;
+		format.framesPerPacket = m_pAudioCodecContext->frame_size;
+	}
 
 	return format;
 }
