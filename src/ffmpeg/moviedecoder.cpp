@@ -1,4 +1,5 @@
 #include "cinder/App/App.h"
+#include "cinder/Utilities.h"
 
 #include "ffmpeg/audioframe.h"
 #include "ffmpeg/moviedecoder.h"
@@ -471,6 +472,8 @@ bool MovieDecoder::decodeAudioFrame( AudioFrame &frame )
 
 void MovieDecoder::readPackets()
 {
+	cinder::setThreadName( "MovieDecoder thread" );
+
 	AVPacket packet;
 
 	while( !m_bDone || m_bSeeking ) {
