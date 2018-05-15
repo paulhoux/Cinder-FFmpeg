@@ -1,34 +1,36 @@
 #include "cinder/app/App.h"
 
-#include "audiorenderer/audioformat.h"
-#include "audiorenderer/audioframe.h"
-#include "audiorenderer/openalrenderer.h"
-#include "common/numericoperations.h"
+#include "ffmpeg/audioformat.h"
+#include "ffmpeg/audioframe.h"
+#include "ffmpeg/numericoperations.h"
+#include "ffmpeg/openalrenderer.h"
 
 using namespace std;
 
-ALCdevice * OpenAlRenderer::mPAudioDevice = nullptr;
-ALCcontext *OpenAlRenderer::mPAlcContext = nullptr;
-int         OpenAlRenderer::mRefCount = 0;
+namespace ffmpeg {
+
+ALCdevice * OpenAlRenderer::s_pAudioDevice = nullptr;
+ALCcontext *OpenAlRenderer::s_pAlcContext = nullptr;
+int         OpenAlRenderer::s_RefCount = 0;
 
 OpenAlRenderer::OpenAlRenderer()
     : AudioRenderer()
     , mAudioSource( 0 )
     , mCurrentBuffer( 0 )
-    , mVolume( 1.f )
+    , mVolume( 1 )
     , mAudioFormat( AL_FORMAT_STEREO16 )
     , mNumChannels( 0 )
     , mFrequency( 0 )
 {
-	if( !mPAudioDevice )
-		mPAudioDevice = alcOpenDevice( NULL );
+	if( !s_pAudioDevice )
+		s_pAudioDevice = alcOpenDevice( NULL );
 
-	if( mPAudioDevice && !mPAlcContext ) {
-		mPAlcContext = alcCreateContext( mPAudioDevice, NULL );
-		alcMakeContextCurrent( mPAlcContext );
+	if( s_pAudioDevice && !s_pAlcContext ) {
+		s_pAlcContext = alcCreateContext( s_pAudioDevice, NULL );
+		alcMakeContextCurrent( s_pAlcContext );
 	}
 
-	mRefCount++;
+	s_RefCount++;
 
 	assert( alGetError() == AL_NO_ERROR );
 	alGenBuffers( NUM_BUFFERS, mAudioBuffers );
@@ -41,16 +43,16 @@ OpenAlRenderer::~OpenAlRenderer()
 	alDeleteSources( 1, &mAudioSource );
 	alDeleteBuffers( NUM_BUFFERS, mAudioBuffers );
 
-	if( --mRefCount <= 0 ) {
-		if( mPAlcContext ) {
+	if( --s_RefCount <= 0 ) {
+		if( s_pAlcContext ) {
 			alcMakeContextCurrent( NULL );
-			alcDestroyContext( mPAlcContext );
-			mPAlcContext = nullptr;
+			alcDestroyContext( s_pAlcContext );
+			s_pAlcContext = nullptr;
 		}
 
-		if( mPAudioDevice ) {
-			alcCloseDevice( mPAudioDevice );
-			mPAudioDevice = nullptr;
+		if( s_pAudioDevice ) {
+			alcCloseDevice( s_pAudioDevice );
+			s_pAudioDevice = nullptr;
 		}
 	}
 }
@@ -173,7 +175,7 @@ void OpenAlRenderer::flushBuffers()
 	}
 }
 
-bool OpenAlRenderer::isPlaying()
+bool OpenAlRenderer::isPlaying() const
 {
 	ALenum state;
 	alGetSourcei( mAudioSource, AL_SOURCE_STATE, &state );
@@ -220,3 +222,5 @@ double OpenAlRenderer::getCurrentPts()
 
 	return mPtsQueue.empty() ? 0 : mPtsQueue.front() + double( offsetInSeconds );
 }
+
+} // namespace ffmpeg

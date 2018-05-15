@@ -1,8 +1,9 @@
-#ifndef NUMERIC_OPERATIONS_H
-#define NUMERIC_OPERATIONS_H
+#pragma once
 
 #include <sstream>
 #include <string>
+
+namespace ffmpeg {
 
 class NumericOperations {
   public:
@@ -26,4 +27,4 @@ class NumericOperations {
 	}
 };
 
-#endif
+} // namespace ffmpeg

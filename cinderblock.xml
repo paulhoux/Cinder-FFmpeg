@@ -11,14 +11,8 @@
 	>
 	<supports os="msw" />
 	<includePath>include</includePath>
-	<header>include/CinderFFmpeg.h</header>
-	<sourcePattern>include/common/*.h</sourcePattern>
-	<sourcePattern>include/audiorenderer/*.h</sourcePattern>
-	<sourcePattern>include/movierenderer/*.h</sourcePattern>
-	<sourcePattern>src/CinderFFmpeg.cpp</sourcePattern>
-	<sourcePattern>src/common/*.cpp</sourcePattern>
-	<sourcePattern>src/audiorenderer/*.cpp</sourcePattern>
-	<sourcePattern>src/movierenderer/*.cpp</sourcePattern>
+	<sourcePattern>include/ffmpeg/*.h</sourcePattern>
+	<sourcePattern>src/ffmpeg/*.cpp</sourcePattern>
 	<platform os="msw">
 		<staticLibrary>build/lib/msw/$(PlatformTarget)/avcodec.lib</staticLibrary>
 		<!--staticLibrary>build/lib/msw/$(PlatformTarget)/avdevice.lib</staticLibrary-->
@@ -41,5 +35,5 @@
 		<!--buildCopy>build/bin/msw/$(PlatformTarget)/openal32.dll</buildCopy-->
 	</platform>
 </block>
-<template>templates/Basic FFmpeg/template.xml</template>
+<!-- template>templates/Basic FFmpeg/template.xml</template -->
 </cinder>

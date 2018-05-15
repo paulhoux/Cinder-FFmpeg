@@ -1,5 +1,6 @@
-#ifndef AUDIOFORMAT_H
-#define AUDIOFORMAT_H
+#pragma once
+
+namespace ffmpeg {
 
 struct AudioFormat {
 	unsigned int bits;
@@ -8,4 +9,4 @@ struct AudioFormat {
 	unsigned int framesPerPacket;
 };
 
-#endif
+}

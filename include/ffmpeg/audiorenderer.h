@@ -1,13 +1,13 @@
-#ifndef AUDIORENDERER_H
-#define AUDIORENDERER_H
+#pragma once
+
+namespace ffmpeg {
 
 class AudioFrame;
 struct AudioFormat;
 
 class AudioRenderer {
   public:
-	AudioRenderer();
-	virtual ~AudioRenderer();
+	virtual ~AudioRenderer() = default;
 
 	virtual void setFormat( const AudioFormat &format ) = 0;
 
@@ -25,4 +25,4 @@ class AudioRenderer {
 	virtual double getCurrentPts() = 0;
 };
 
-#endif
+} // namespace ffmpeg

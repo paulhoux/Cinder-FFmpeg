@@ -1,8 +1,8 @@
 #include "cinder/App/App.h"
 
-#include "audiorenderer/audioframe.h"
-#include "movierenderer/moviedecoder.h"
-#include "movierenderer/videoframe.h"
+#include "ffmpeg/audioframe.h"
+#include "ffmpeg/moviedecoder.h"
+#include "ffmpeg/videoframe.h"
 
 #include <cassert>
 
@@ -16,7 +16,8 @@ extern "C" {
 #define VIDEO_FRAMES_BUFFERSIZE 5
 
 using namespace std;
-//using namespace boost;
+
+namespace ffmpeg {
 
 void MovieDecoder::startFFmpeg()
 {
@@ -28,9 +29,10 @@ void MovieDecoder::startFFmpeg()
 	}
 }
 
-MovieDecoder::MovieDecoder( const string &filename )
+MovieDecoder::MovieDecoder( const string &filename, AVPixelFormat format )
     : m_VideoStream( -1 )
     , m_AudioStream( -1 )
+    , m_PixelFormat( format )
     , m_pFormatContext( NULL )
     , m_pVideoCodecContext( NULL )
     , m_pAudioCodecContext( NULL )
@@ -43,7 +45,6 @@ MovieDecoder::MovieDecoder( const string &filename )
     , m_pSwrContext( NULL )
     , m_MaxVideoQueueSize( VIDEO_QUEUESIZE )
     , m_MaxAudioQueueSize( AUDIO_QUEUESIZE )
-    , m_pPacketReaderThread( NULL )
     , m_bInitialized( false )
     , m_bPlaying( false )
     , m_bPaused( false )
@@ -56,41 +57,30 @@ MovieDecoder::MovieDecoder( const string &filename )
 {
 	m_bInitialized = false;
 
+	// Make sure FFmpeg is initialized.
 	startFFmpeg();
 
+	// Create a packet that signals a flush.
 	av_init_packet( &m_FlushPacket );
 	m_FlushPacket.data = reinterpret_cast<uint8_t *>( "FLUSH" );
 	m_FlushPacket.size = strlen( reinterpret_cast<const char *>( m_FlushPacket.data ) );
 
-#if LIBAVCODEC_VERSION_MAJOR < 53
-	if( av_open_input_file( &m_pFormatContext, filename.c_str(), NULL, 0, NULL ) != 0 )
-#else
-	if( avformat_open_input( &m_pFormatContext, filename.c_str(), NULL, NULL ) != 0 )
-#endif
-	{
-		throw logic_error( "MovieDecoder: Could not open input file" );
-	}
+	// Try to open the video file.
+	if( avformat_open_input( &m_pFormatContext, filename.c_str(), NULL, NULL ) < 0 )
+		throw logic_error( "MovieDecoder: Could not open input file: " + filename );
 
-	try {
-#if LIBAVCODEC_VERSION_MAJOR < 53
-		if( av_find_stream_info( m_pFormatContext ) < 0 )
-#else
-		if( avformat_find_stream_info( m_pFormatContext, NULL ) < 0 )
-#endif
-			throw;
-	}
-	catch( ... ) {
+	// Gather info on the streams.
+	if( avformat_find_stream_info( m_pFormatContext, NULL ) < 0 )
 		throw logic_error( "MovieDecoder: Could not find stream information" );
-	}
 
 #ifdef _DEBUG
 	av_log_set_level( AV_LOG_DEBUG );
-	//av_dump_format(m_pFormatContext, 0, filename.c_str(), false);
+	av_dump_format( m_pFormatContext, 0, filename.c_str(), false );
 #endif
 
 	m_bHasVideo = initializeVideo();
 	m_bHasAudio = initializeAudio();
-	m_bInitialized = ( m_bHasVideo || m_bHasAudio );
+	m_bInitialized = m_bHasVideo;
 }
 
 MovieDecoder::~MovieDecoder()
@@ -120,12 +110,7 @@ MovieDecoder::~MovieDecoder()
 	}
 
 	if( m_pFormatContext ) {
-#if LIBAVCODEC_VERSION_MAJOR < 53
-		av_close_input_file( m_pFormatContext );
-		m_pFormatContext = NULL;
-#else
 		avformat_close_input( &m_pFormatContext );
-#endif
 	}
 
 	if( m_pSwrContext )
@@ -135,12 +120,7 @@ MovieDecoder::~MovieDecoder()
 bool MovieDecoder::initializeVideo()
 {
 	for( unsigned int i = 0; i < m_pFormatContext->nb_streams; i++ ) {
-#if LIBAVCODEC_VERSION_MAJOR < 53
-		if( m_pFormatContext->streams[i]->codec->codec_type == CODEC_TYPE_VIDEO )
-#else
-		if( m_pFormatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_VIDEO )
-#endif
-		{
+		if( m_pFormatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_VIDEO ) {
 			m_pVideoStream = m_pFormatContext->streams[i];
 			m_VideoStream = i;
 			break;
@@ -156,8 +136,7 @@ bool MovieDecoder::initializeVideo()
 	m_pVideoCodec = avcodec_find_decoder( m_pVideoCodecContext->codec_id );
 
 	if( m_pVideoCodec == NULL ) {
-		// set to NULL, otherwise avcodec_close(m_pVideoCodecContext) crashes
-		m_pVideoCodecContext = NULL;
+		m_pVideoCodecContext = NULL; // Set to NULL, otherwise avcodec_close( m_pVideoCodecContext ) crashes.
 		throw logic_error( "MovieDecoder: Video Codec not found" );
 		return false;
 	}
@@ -165,12 +144,7 @@ bool MovieDecoder::initializeVideo()
 	m_pVideoCodecContext->workaround_bugs = 1;
 	m_pFormatContext->flags |= AVFMT_FLAG_GENPTS;
 
-#if LIBAVCODEC_VERSION_MAJOR < 53
-	if( avcodec_open( m_pVideoCodecContext, m_pVideoCodec ) < 0 )
-#else
-	if( avcodec_open2( m_pVideoCodecContext, m_pVideoCodec, NULL ) < 0 )
-#endif
-	{
+	if( avcodec_open2( m_pVideoCodecContext, m_pVideoCodec, NULL ) < 0 ) {
 		throw logic_error( "MovieDecoder: Could not open video codec" );
 		return false;
 	}
@@ -183,12 +157,7 @@ bool MovieDecoder::initializeVideo()
 bool MovieDecoder::initializeAudio()
 {
 	for( unsigned int i = 0; i < m_pFormatContext->nb_streams; i++ ) {
-#if LIBAVCODEC_VERSION_MAJOR < 53
-		if( m_pFormatContext->streams[i]->codec->codec_type == CODEC_TYPE_AUDIO )
-#else
-		if( m_pFormatContext->streams[i]->codec->codec_type == AVMEDIA_TYPE_AUDIO )
-#endif
-		{
+		if( m_pFormatContext->streams[i]->codecpar->codec_type == AVMEDIA_TYPE_AUDIO ) {
 			m_pAudioStream = m_pFormatContext->streams[i];
 			m_AudioStream = i;
 			break;
@@ -205,20 +174,14 @@ bool MovieDecoder::initializeAudio()
 	m_pAudioCodec = avcodec_find_decoder( m_pAudioCodecContext->codec_id );
 
 	if( m_pAudioCodec == NULL ) {
-		// set to NULL, otherwise avcodec_close(m_pAudioCodecContext) crashes
-		m_pAudioCodecContext = NULL;
+		m_pAudioCodecContext = NULL; // Set to NULL, otherwise avcodec_close( m_pAudioCodecContext ) crashes.
 		throw logic_error( "MovieDecoder: Audio Codec not found" );
 		return false;
 	}
 
 	m_pAudioCodecContext->workaround_bugs = 1;
 
-#if LIBAVCODEC_VERSION_MAJOR < 53
-	if( avcodec_open( m_pAudioCodecContext, m_pAudioCodec ) < 0 )
-#else
-	if( avcodec_open2( m_pAudioCodecContext, m_pAudioCodec, NULL ) < 0 )
-#endif
-	{
+	if( avcodec_open2( m_pAudioCodecContext, m_pAudioCodec, NULL ) < 0 ) {
 		throw logic_error( "MovieDecoder: Could not open audio codec" );
 		return false;
 	}
@@ -299,18 +262,20 @@ bool MovieDecoder::decodeVideoFrame( VideoFrame &frame )
 		return false;
 
 	AVPacket packet;
-	bool     frameDecoded = false;
 
+	bool frameDecoded = false;
 	do {
+		// Get video packet from the queue, if any.
 		if( !popVideoPacket( &packet ) )
 			return false;
 
-		// handle flush packets
+		// Handle flush packets.
 		if( packet.data == m_FlushPacket.data ) {
 			avcodec_flush_buffers( m_pFormatContext->streams[m_VideoStream]->codec );
 			continue;
 		}
 
+		// Decode video packet.
 		frameDecoded = decodeVideoPacket( packet );
 	} while( !frameDecoded );
 
@@ -324,6 +289,7 @@ bool MovieDecoder::decodeVideoFrame( VideoFrame &frame )
 		throw logic_error( "MovieDecoder: Interlaced video is not supported yet." );
 	}
 
+	// Update video clock.
 	m_VideoClock = packet.dts * av_q2d( m_pVideoStream->time_base );
 
 	frame.setPts( m_VideoClock );
@@ -331,40 +297,49 @@ bool MovieDecoder::decodeVideoFrame( VideoFrame &frame )
 	frame.setHeight( getFrameHeight() );
 
 	try {
-		if( m_pVideoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P && m_pVideoCodecContext->pix_fmt != AV_PIX_FMT_YUV420P ) {
+		// Check if we need to convert the video frame.
+		if( m_pVideoCodecContext->pix_fmt != m_PixelFormat ) {
+			// Create temporary storage for the converted frame.
 			if( !m_pConvertedFrame )
-				createAVFrame( &m_pConvertedFrame, frame.getWidth(), frame.getHeight(), AV_PIX_FMT_YUV420P );
+				createFrame( &m_pConvertedFrame, frame.getWidth(), frame.getHeight(), m_PixelFormat );
 
-			convertVideoFrame( AV_PIX_FMT_YUV420P );
+			// Convert the frame.
+			convertVideoFrame( m_PixelFormat );
 
-			frame.storeYPlane( m_pConvertedFrame->data[0], m_pConvertedFrame->linesize[0] );
-			frame.storeUPlane( m_pConvertedFrame->data[1], m_pConvertedFrame->linesize[1] );
-			frame.storeVPlane( m_pConvertedFrame->data[2], m_pConvertedFrame->linesize[2] );
+			// Write converted data to output.
+			for( size_t i = 0; i < AV_NUM_DATA_POINTERS; ++i ) {
+				if( !m_pConvertedFrame->data[i] )
+					break;
+				frame.storePlane( i, m_pConvertedFrame->data[i], m_pConvertedFrame->linesize[i] );
+			}
 		}
 		else {
-			frame.storeYPlane( m_pFrame->data[0], m_pFrame->linesize[0] );
-			frame.storeUPlane( m_pFrame->data[1], m_pFrame->linesize[1] );
-			frame.storeVPlane( m_pFrame->data[2], m_pFrame->linesize[2] );
+			// Write data to output.
+			for( size_t i = 0; i < AV_NUM_DATA_POINTERS; ++i ) {
+				if( !m_pConvertedFrame->data[i] )
+					break;
+				frame.storePlane( i, m_pFrame->data[i], m_pFrame->linesize[i] );
+			}
 		}
 	}
 	catch( const std::exception & ) {
 		return false;
 	}
 
-	return frameDecoded;
+	return true;
 }
 
-void MovieDecoder::convertVideoFrame( AVPixelFormat format )
+void MovieDecoder::convertVideoFrame( AVPixelFormat format ) const
 {
 	SwsContext *scaleContext = sws_getContext( m_pVideoCodecContext->width, m_pVideoCodecContext->height, m_pVideoCodecContext->pix_fmt, m_pVideoCodecContext->width, m_pVideoCodecContext->height, format, 0, NULL, NULL, NULL );
 	if( NULL == scaleContext )
-		throw logic_error( "MovieDecoder: Failed to create resize context" );
+		throw logic_error( "MovieDecoder: Failed to create swscale context" );
 
 	sws_scale( scaleContext, m_pFrame->data, m_pFrame->linesize, 0, m_pVideoCodecContext->height, m_pConvertedFrame->data, m_pConvertedFrame->linesize );
 	sws_freeContext( scaleContext );
 }
 
-void MovieDecoder::createAVFrame( AVFrame **avFrame, int width, int height, AVPixelFormat format ) const
+void MovieDecoder::createFrame( AVFrame **avFrame, int width, int height, AVPixelFormat format ) const
 {
 	*avFrame = av_frame_alloc();
 
@@ -381,13 +356,11 @@ bool MovieDecoder::decodeVideoPacket( AVPacket &packet )
 {
 	std::lock_guard<std::mutex> lock( m_DecodeVideoMutex );
 
-	int       frameFinished;
-	const int bytesDecoded = avcodec_decode_video2( m_pVideoCodecContext, m_pFrame, &frameFinished, &packet );
-	av_free_packet( &packet );
-
-	if( bytesDecoded < 0 ) {
+	int frameFinished;
+	if( avcodec_decode_video2( m_pVideoCodecContext, m_pFrame, &frameFinished, &packet ) < 0 ) {
 		ci::app::console() << "Failed to decode video frame: bytesDecoded < 0" << endl;
 	}
+	av_free_packet( &packet );
 
 	return frameFinished > 0;
 }
@@ -399,11 +372,12 @@ bool MovieDecoder::decodeAudioFrame( AudioFrame &frame )
 
 	bool frameDecoded = false;
 
+	// Get audio packet from the queue, if any.
 	AVPacket packet;
 	if( !popAudioPacket( &packet ) )
 		return false;
 
-	// handle flush packets
+	// Handle flush packets.
 	if( packet.data == m_FlushPacket.data ) {
 		avcodec_flush_buffers( m_pFormatContext->streams[m_AudioStream]->codec );
 		return false;
@@ -552,9 +526,9 @@ void MovieDecoder::start()
 	m_bPlaying = true;
 	m_bPaused = false;
 	m_bDone = false;
-	if( !m_pPacketReaderThread ) {
-		m_pPacketReaderThread = new std::thread( std::bind( &MovieDecoder::readPackets, this ) );
-	}
+
+	if( !m_pPacketReaderThread )
+		m_pPacketReaderThread = std::make_unique<std::thread>( std::bind( &MovieDecoder::readPackets, this ) );
 }
 
 void MovieDecoder::pause()
@@ -581,10 +555,10 @@ void MovieDecoder::stop()
 	m_bPlaying = false;
 	m_bPaused = false;
 	m_bDone = true;
+
 	if( m_pPacketReaderThread ) {
 		m_pPacketReaderThread->join();
-		delete m_pPacketReaderThread;
-		m_pPacketReaderThread = NULL;
+		m_pPacketReaderThread.reset();
 	}
 
 	clearQueue( m_AudioQueue );
@@ -615,9 +589,8 @@ bool MovieDecoder::queuePacket( queue<AVPacket> &packetQueue, AVPacket *packet )
 
 bool MovieDecoder::popPacket( queue<AVPacket> &packetQueue, AVPacket *packet ) const
 {
-	if( packetQueue.empty() ) {
+	if( packetQueue.empty() )
 		return false;
-	}
 
 	*packet = packetQueue.front();
 	packetQueue.pop();
@@ -627,9 +600,8 @@ bool MovieDecoder::popPacket( queue<AVPacket> &packetQueue, AVPacket *packet ) c
 
 void MovieDecoder::clearQueue( std::queue<AVPacket> &packetQueue ) const
 {
-	while( !packetQueue.empty() ) {
+	while( !packetQueue.empty() )
 		packetQueue.pop();
-	}
 }
 
 bool MovieDecoder::popAudioPacket( AVPacket *packet )
@@ -687,3 +659,5 @@ AudioFormat MovieDecoder::getAudioFormat()
 
 	return format;
 }
+
+} // namespace ffmpeg

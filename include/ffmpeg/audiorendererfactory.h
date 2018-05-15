@@ -1,5 +1,6 @@
-#ifndef AUDIORENDERERFACTORY_H
-#define AUDIORENDERERFACTORY_H
+#pragma once
+
+namespace ffmpeg {
 
 class AudioRenderer;
 
@@ -7,10 +8,10 @@ class AudioRendererFactory {
   public:
 	enum AudioOutputType {
 		OPENAL_OUTPUT,
-		ALSA_OUTPUT
+		CINDER_OUTPUT
 	};
 
 	static AudioRenderer *create( AudioOutputType type );
 };
 
-#endif
+} // namespace ffmpeg
