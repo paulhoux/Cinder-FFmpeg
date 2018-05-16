@@ -317,7 +317,7 @@ bool MovieDecoder::decodeVideoFrame( VideoFrame &frame )
 		else {
 			// Write data to output.
 			for( size_t i = 0; i < AV_NUM_DATA_POINTERS; ++i ) {
-				if( !m_pConvertedFrame->data[i] )
+				if( !m_pFrame->data[i] )
 					break;
 				frame.storePlane( i, m_pFrame->data[i], m_pFrame->linesize[i] );
 			}
