@@ -14,8 +14,8 @@ class VideoFrame {
 		return ( m_pData && m_Width > 0 && m_Height > 0 );
 	}
 
-	bool     empty() const { return m_Count == 0; }
-	size_t   size() const { return m_Count; }
+	bool   empty() const { return m_Count == 0; }
+	size_t size() const { return m_Count; }
 
 	size_t   getDataSize( size_t index = 0 ) const;
 	uint8_t *getPlane( size_t index = 0 ) const;
@@ -23,6 +23,8 @@ class VideoFrame {
 	int      getWidth() const;
 	int      getHeight() const;
 	int      getLineSize( size_t index = 0 ) const;
+	int      getPlaneWidth( size_t index = 0 ) const { return getLineSize( index ); }
+	int      getPlaneHeight( size_t index = 0 ) const { return m_Height * getLineSize( index ) / m_Width; }
 
 	void storePlane( size_t index, uint8_t *data, int lineSize );
 	void setPts( double pts );
